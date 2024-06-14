@@ -40,17 +40,17 @@
 
 		function render(ctx) {
 			colors = [
-				'#bf242a',
-				'#96514d',
-				'#e6b422',
-				'#006e54',
-				'#895b8a',
-				'#8d6449',
-				'#8b968d',
-				'#ee827c',
-				'#44617b',
-				'#cd5e3c',
-				'#008899'
+				'#8B0016',
+				'#945305',
+				'#9C9900',
+				'#367517',
+				'#00676B',
+				'#103667',
+				'#211551',
+				'#38044B',
+				'#64004B',
+				'#006241',
+				'#000000'
 			]
 			for (let i = 0; i < ctx.colNum; ++i) {
 				renderColor(ctx.context, ctx.colColors[i], colors[ctx.upDepth[i]], ctx.upLimit[i])
@@ -145,6 +145,7 @@
 				ctx.upLimit[col] = item.limit
 				ctx.upDepth[col] = item.depth
 			}
+
 		}
 
 		function handleClick(event, ctx) {
@@ -184,8 +185,8 @@
 			ctx.canvas.style.position = "relative"
 
 			baseSize = Math.floor(ctx.width / (ctx.colNum + 1))
-			ctx.blockSpace = 5
-			ctx.margin = 5
+			ctx.blockSpace = 2
+			ctx.margin = 2
 
 			ctx.itemBlockSize = baseSize
 			ctx.colorBlockSize = ctx.width - ctx.margin * 2 - (baseSize + ctx.blockSpace) * ctx.colNum
