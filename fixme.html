@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FIX ME</title>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            width: 100vw;
+            user-select: none;
+            overflow: hidden;
+            background: #002fa7;
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="main"></canvas>
+    <script>
+
+        function initialize() {
+            const canvas = document.getElementById('main');
+            const context = canvas.getContext('2d');
+
+            let width = window.innerWidth;
+            let height = width / 9 * 16;
+            if (height > window.innerHeight) {
+                height = window.innerHeight;
+                width = height / 16 * 9;
+            }
+            const left = (window.innerWidth - width) / 2;
+            const top = (window.innerHeight - height) / 2;
+
+            canvas.width = width;
+            canvas.height = height;
+            canvas.style.position = 'absolute';
+            canvas.style.left = left + 'px';
+            canvas.style.top = top + 'px';
+
+            const paddingX = 50;
+            const paddingY = 20;
+            const middleNum = 6;
+            const reduceInNum = 2;
+            const reduceOutNum = 2;
+            const invalidInNum = 2;
+            const invalidOutNum = 2;
+            const stringInNum = middleNum + reduceInNum + invalidInNum;
+            const stringOutNum = middleNum + reduceOutNum + invalidOutNum;
+
+            const gridWidth = (width - paddingX * 2) / (stringInNum + 1);
+            const girdHeight = gridWidth * 1.5;
+            const nodeRadius = 5;
+            const stringOffset = 2;
+
+            const charWidth = (width - paddingX * 2) / 10;
+            const markWidth = (width - paddingX * 2) / 3;
+
+            const aeraInLeft = 0;
+            const aeraInRight = paddingX;
+            const aeraInTop = paddingY - girdHeight / 2;
+            const aeraInBottom = paddingY + stringInNum * girdHeight - girdHeight / 2;
+
+            const aeraOutLeft = width - paddingX;
+            const aeraOutRight = width;
+            const aeraOutTop = paddingY - girdHeight / 2;
+            const aeraOutBottom = paddingY + stringOutNum * girdHeight - girdHeight / 2;
+
+            const aeraStringLeft = paddingX;
+            const aeraStringRight = width - paddingX;
+            const aeraStringTop = paddingY;
+            const aeraStringBottom = paddingY + stringInNum * girdHeight - girdHeight;
+
+            const aeraKeyOutLeft = paddingX;
+            const aeraKeyOutRight = width - paddingX;
+            const aeraKeyOutTop = aeraStringBottom + charWidth;
+            const aeraKeyOutBottom = aeraKeyOutTop + charWidth * 3;
+
+            const aeraKeyInLeft = paddingX;
+            const aeraKeyInRight = width - paddingX;
+            const aeraKeyInBottom = height - paddingY;
+            const aeraKeyInTop = aeraKeyInBottom - charWidth * 3;
+
+            
+            const aeraMarkLeft = paddingX;
+            const aeraMarkRight = width - paddingX;
+            const aeraMarkBottom = aeraKeyInTop;
+            const aeraMarkTop = aeraKeyOutBottom;
+
+            const shadowBlur = 2;
+            const shadowOffset = 1;
+            const lineWidth = 1;
+
+
+            const rangeMax = [];
+            for (let i = 0; i < (1 << middleNum); ++i) {
+                rangeMax.push(i);
+            }
+
+            const middleSigns = shuffleArray(rangeMax).splice(0, 26);
+
+            console.log(middleSigns);
+
+            const outMap = [];
+            const inMap = [];
+            for (let i = 0; i < middleNum; ++i) {
+                outMap.push(i);
+                inMap.push(i);
+            }
+
+            for (let i = 0; i < reduceInNum; ++i) {
+                inMap.push(Math.floor(Math.random() * middleNum));
+            }
+            for (let i = 0; i < reduceOutNum; ++i) {
+                outMap.push(Math.floor(Math.random() * middleNum));
+            }
+
+            for (let i = 0; i < invalidInNum; ++i) {
+                inMap.push(-1);
+            }
+            for (let i = 0; i < invalidOutNum; ++i) {
+                outMap.push(-1);
+            }
+
+            // console.log(inMap, outMap);
+            const shuffleInMap = shuffleArray(inMap);
+            const shuffleOutMap = shuffleArray(outMap);
+            console.log(shuffleInMap, shuffleOutMap);
+
+            // const inSigns = [];
+            const CS = 'QWERTYUIOPASDFGHJKLZXCVBNM';
+            const in2char = {};
+            for (let i = 0; i < middleSigns.length; ++i) {
+                let tmp = 0;
+                for (let j = 0; j < shuffleInMap.length; ++j) {
+                    if (shuffleInMap[j] < 0) {
+                        continue;
+                    }
+                    if ((middleSigns[i] & (1 << shuffleInMap[j])) == 0) {
+                        continue;
+                    }
+                    tmp |= (1 << j);
+                }
+                // inSigns.push(tmp);
+                in2char[tmp] = CS[i];
+            }
+
+            // console.log(inSigns);
+            console.log(in2char);
+
+            const revertOutMap = [];
+            for (let i = 0; i < middleNum; ++i) {
+                revertOutMap.push([]);
+            }
+            for (let i = 0; i < shuffleOutMap.length; ++i) {
+                if (shuffleOutMap[i] < 0) {
+                    continue;
+                }
+                revertOutMap[shuffleOutMap[i]].push(i);
+            }
+
+            console.log(revertOutMap);
+
+            const outSigns = [];
+            for (let i = 0; i < middleSigns.length; ++i) {
+                let tmp = 0;
+                for(let j = 0; j < middleNum; ++j) {
+                    if ((middleSigns[i] & (1 << j)) == 0) {
+                        continue;
+                    }
+                    tmp |= (1 << revertOutMap[j][Math.floor(Math.random() * revertOutMap[j].length)]);
+                }
+
+                for (let j = 0; j < outMap.length; ++j) {
+                    if (outMap[j] >= 0) {
+                        continue;
+                    }
+                    if (Math.random() > 0.5) {
+                        continue;
+                    }
+                    tmp |= (1 << j);
+                }
+
+                outSigns.push(tmp);
+            }
+
+            console.log(outSigns);
+
+
+            // const in2out = [];
+            // for (let i = 0; i < inMap.length; ++i) {
+            //     if (inMap[i] < 0) {
+            //         in2out.push([]);
+            //         continue;
+            //     }
+            //     let tmp = [];
+            //     for (let j = 0; j < revertOutMap[inMap[i]].length; ++j) {
+            //         tmp.push(revertOutMap[inMap[i]][j]);
+            //     }
+            //     in2out.push(tmp);
+            // }
+
+            // console.log(in2out);
+
+
+            // const debug = [];
+            // for (let i = 0; i < outSigns.length; ++i) {
+            //     let tmp = 0;
+            //     for (let j = 0; j < in2out.length; ++j) {
+            //         for (let k = 0; k < in2out[j].length; ++k) {
+            //             if ((outSigns[i] & (1 << in2out[j][k])) == 0) {
+            //                 continue;
+            //             }
+            //             tmp |= (1 << j);
+            //         }
+            //     }
+            //     debug.push(tmp);
+            // }
+
+            // console.log(debug);
+
+            const mark = [];
+            for (let i = 0; i < middleSigns.length; ++i) {
+                let tmp = [];
+                for (let j = 0; j < stringInNum; ++j) {
+                    tmp.push('?');
+                }
+                for (let j = 0; j < stringOutNum; ++j) {
+                    tmp.push('?');
+                }
+                mark.push(tmp);
+            }
+
+            const ans = [];
+            for (let i = 0; i < stringInNum; ++i) {
+                ans.push([]);
+            }
+
+            const charset = [
+                'QWERTYUIOP',
+                'ASDFGHJKL',
+                'ZXCVBNM'
+            ];
+            
+            const fontSize = 25;
+            const originColor = '#d9333f';
+            const lightColor = '#571419';
+            const darkColor = '#ff5265';
+
+            const originColorHightLight = '#c3d825';
+            const lightColorHightLight = '#4e560f';
+            const darkColorHightLight = '#ffff3b';
+
+            const selectCol = -1;
+            const selectRow = -1;
+            const selectIn = -1;
+            const selectOut = -1;
+            const selectMark = -1;
+
+            return {
+                canvas, context,
+                left, top,
+                width, height,
+                paddingX, paddingY,
+                middleNum, reduceInNum, reduceOutNum,
+                invalidInNum, invalidOutNum,
+                stringInNum, stringOutNum,
+                gridWidth, girdHeight,
+                nodeRadius, stringOffset,
+                charWidth, markWidth,
+                aeraInLeft, aeraInRight, aeraInTop, aeraInBottom,
+                aeraOutLeft, aeraOutRight, aeraOutTop, aeraOutBottom,
+                aeraStringLeft, aeraStringRight, aeraStringTop, aeraStringBottom,
+                aeraKeyOutLeft, aeraKeyOutRight, aeraKeyOutTop, aeraKeyOutBottom,
+                aeraKeyInLeft, aeraKeyInRight, aeraKeyInBottom, aeraKeyInTop,
+                aeraMarkLeft, aeraMarkRight, aeraMarkBottom, aeraMarkTop,
+                shadowBlur, shadowOffset,
+                lineWidth, fontSize,
+                charset,
+                selectCol, selectRow, selectIn, selectOut, selectMark,
+                originColor, lightColor, darkColor,
+                originColorHightLight, lightColorHightLight, darkColorHightLight,
+                in2char, outSigns, mark, ans
+            };
+        }
+
+        function roundRect(x, y, width, height, radius) {
+            // 处理半径大于宽高一半的情况，确保半径不超过宽高的一半
+            if (radius > width / 2) radius = width / 2;
+            if (radius > height / 2) radius = height / 2;
+            // 路径的起始点
+            let path = `M ${x + radius} ${y}`;
+            // 顶部横线
+            path += ` h ${width - 2 * radius}`;
+            // 右上角圆角
+            path += ` a ${radius} ${radius} 0 0 1 ${radius} ${radius}`;
+            // 右侧竖线
+            path += ` v ${height - 2 * radius}`;
+            // 右下角圆角
+            path += ` a ${radius} ${radius} 0 0 1 -${radius} ${radius}`;
+            // 底部横线
+            path += ` h ${-(width - 2 * radius)}`;
+            // 左下角圆角
+            path += ` a ${radius} ${radius} 0 0 1 -${radius} -${radius}`;
+            // 左侧竖线
+            path += ` v ${-(height - 2 * radius)}`;
+            // 左上角圆角
+            path += ` a ${radius} ${radius} 0 0 1 ${radius} -${radius}`;
+            // 闭合路径
+            path += ' Z';
+            return new Path2D(path);
+        }
+
+        function circle(x, y, radius) {
+            // 起始点
+            let path = `M ${x + radius} ${y}`;
+            // 绘制上半圆
+            path += ` a ${radius} ${radius} 0 1 1 ${-2 * radius} 0`;
+            // 绘制下半圆
+            path += ` a ${radius} ${radius} 0 1 1 ${2 * radius} 0`;
+            // 闭合路径
+            path += ' Z';
+            return new Path2D(path);
+        }
+
+        function multiLine(lines, radius) {
+            let path = `M ${lines[0][0]} ${lines[0][1]}`;
+            for (let i = 1; i < lines.length - 1; ++i) {
+                path += ` l ${lines[i][0] - lines[i-1][0]} ${lines[i][1] - lines[i-1][1]}`;
+            }
+            path += ` l ${lines[lines.length - 1][0] - lines[lines.length - 2][0]} ${lines[lines.length - 1][1] - lines[lines.length - 2][1]}`;
+            return new Path2D(path);
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function drawIn(ctx, manager) {
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                if (i == manager.selectIn) {
+                    continue;
+                }
+                ctx.fill(circle(manager.aeraStringLeft, manager.aeraStringTop + i * manager.girdHeight-manager.stringOffset, manager.nodeRadius));
+            }
+
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                if (i == manager.selectIn) {
+                    continue;
+                }
+                ctx.fill(circle(manager.aeraStringLeft, manager.aeraStringTop + i * manager.girdHeight-manager.stringOffset, manager.nodeRadius));
+            }
+
+            if (manager.selectIn >= 0) {
+                ctx.fillStyle = manager.originColorHightLight;
+                ctx.shadowBlur = manager.shadowBlur;
+                ctx.shadowColor = manager.darkColorHightLight;
+                ctx.shadowOffsetX = manager.shadowOffset;
+                ctx.shadowOffsetY = manager.shadowOffset;
+                ctx.fill(circle(manager.aeraStringLeft, manager.aeraStringTop + manager.selectIn * manager.girdHeight-manager.stringOffset, manager.nodeRadius));
+                ctx.shadowColor = manager.lightColorHightLight;
+                ctx.shadowOffsetX = -manager.shadowOffset;
+                ctx.shadowOffsetY = -manager.shadowOffset;
+                ctx.fill(circle(manager.aeraStringLeft, manager.aeraStringTop + manager.selectIn * manager.girdHeight-manager.stringOffset, manager.nodeRadius));
+            }
+        }
+
+        function drawOut(ctx, manager) {
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.stringOutNum; ++i) {
+                if (i == manager.selectOut) {
+                    continue;
+                }
+                ctx.fill(circle(manager.aeraStringRight, manager.aeraStringTop + i * manager.girdHeight+manager.stringOffset, manager.nodeRadius));
+            }
+
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;
+            for (let i = 0; i < manager.stringOutNum; ++i) {
+                if (i == manager.selectOut) {
+                    continue;
+                }
+                ctx.fill(circle(manager.aeraStringRight, manager.aeraStringTop + i * manager.girdHeight+manager.stringOffset, manager.nodeRadius));
+            }
+
+            if (manager.selectOut >= 0) {
+                ctx.fillStyle = manager.originColorHightLight;
+                ctx.shadowBlur = manager.shadowBlur;
+                ctx.shadowColor = manager.darkColorHightLight;
+                ctx.shadowOffsetX = manager.shadowOffset;
+                ctx.shadowOffsetY = manager.shadowOffset;
+                ctx.fill(circle(manager.aeraStringRight, manager.aeraStringTop + manager.selectOut * manager.girdHeight+manager.stringOffset, manager.nodeRadius));
+                ctx.shadowColor = manager.lightColorHightLight;
+                ctx.shadowOffsetX = -manager.shadowOffset;
+                ctx.shadowOffsetY = -manager.shadowOffset;
+                ctx.fill(circle(manager.aeraStringRight, manager.aeraStringTop + manager.selectOut * manager.girdHeight+manager.stringOffset, manager.nodeRadius));
+            }
+        }
+
+        function drawKeyIn(ctx, manager) {
+            ctx.font = `${manager.fontSize}px arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.charset.length; ++i) {
+                for (let j = 0; j < manager.charset[i].length; ++j) {
+                    if (i == manager.selectRow && j == manager.selectCol) {
+                        continue;
+                    }
+                    let x = manager.aeraKeyInLeft + j * manager.charWidth + i * manager.charWidth / 2 + manager.charWidth / 2;
+                    let y = manager.aeraKeyInTop + i * manager.charWidth + manager.charWidth / 2;
+                    ctx.fillText(manager.charset[i][j], x, y);
+                }
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;
+            for (let i = 0; i < manager.charset.length; ++i) {
+                for (let j = 0; j < manager.charset[i].length; ++j) {
+                    if (i == manager.selectRow && j == manager.selectCol) {
+                        continue;
+                    }
+                    let x = manager.aeraKeyInLeft + j * manager.charWidth + i * manager.charWidth / 2 + manager.charWidth / 2;
+                    let y = manager.aeraKeyInTop + i * manager.charWidth + manager.charWidth / 2;
+                    ctx.fillText(manager.charset[i][j], x, y);
+                }
+            }
+            if (manager.selectRow >= 0 && manager.selectCol >= 0) {
+                ctx.fillStyle = manager.originColorHightLight;
+                ctx.shadowBlur = manager.shadowBlur;
+                ctx.shadowColor = manager.darkColorHightLight;
+                ctx.shadowOffsetX = manager.shadowOffset;
+                ctx.shadowOffsetY = manager.shadowOffset;
+                let x = manager.aeraKeyInLeft + manager.selectCol * manager.charWidth + manager.selectRow * manager.charWidth / 2 + manager.charWidth / 2;
+                let y = manager.aeraKeyInTop + manager.selectRow * manager.charWidth + manager.charWidth / 2;
+                ctx.fillText(manager.charset[manager.selectRow][manager.selectCol], x, y);
+                ctx.shadowColor = manager.lightColorHightLight;
+                ctx.shadowOffsetX = -manager.shadowOffset;
+                ctx.shadowOffsetY = -manager.shadowOffset;
+                ctx.fillText(manager.charset[manager.selectRow][manager.selectCol], x, y);
+            }
+        }
+
+        function drawMarkIn(ctx, manager) {
+            if (manager.selectRow < 0 || manager.selectCol < 0) {
+                return;
+            }
+            const base = [0, 10, 19];
+            const index = manager.selectCol + base[manager.selectRow];
+            ctx.font = `${manager.fontSize}px arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                ctx.fillText(manager.mark[index][i], 25, manager.aeraStringTop + i * manager.girdHeight);
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;        
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                ctx.fillText(manager.mark[index][i], 25, manager.aeraStringTop + i * manager.girdHeight);
+            }
+        }
+
+        function drawMarkOut(ctx, manager) {
+            if (manager.selectRow < 0 || manager.selectCol < 0) {
+                return;
+            }
+            const base = [0, 10, 19];
+            const index = manager.selectCol + base[manager.selectRow];
+
+            ctx.font = `${manager.fontSize}px arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                ctx.fillText(manager.mark[index][manager.stringInNum + i], manager.width - 25, manager.aeraStringTop + i * manager.girdHeight);
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;        
+            for (let i = 0; i < manager.stringInNum; ++i) {
+                ctx.fillText(manager.mark[index][manager.stringInNum + i], manager.width - 25, manager.aeraStringTop + i * manager.girdHeight);
+            }
+        }
+
+
+        function drawMark(ctx, manager) {
+            if (manager.selectRow < 0 || manager.selectCol < 0) {
+                return;
+            }
+            if (manager.selectIn < 0 && manager.selectOut < 0) {
+                return;
+            }
+            ctx.font = `${manager.fontSize}px arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            const mark = '0?1';
+            const base = [0, 10, 19];
+            const index = manager.selectCol + base[manager.selectRow];
+
+            let jndex = -1;
+            if (manager.selectIn >= 0) {
+                jndex = manager.selectIn;
+            } else {
+                jndex = manager.selectOut + manager.stringInNum;
+            }
+            let y = (manager.aeraMarkTop + manager.aeraMarkBottom)/2;
+            for (let i = 0; i < mark.length; ++i) {
+                if (mark[i] == manager.mark[index][jndex]) {
+                    continue;
+                }
+                ctx.fillText(mark[i], manager.aeraMarkLeft + manager.markWidth / 2 + manager.markWidth * i, y);
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;   
+            for (let i = 0; i < mark.length; ++i) {
+                if (mark[i] == manager.mark[index][jndex]) {
+                    continue;
+                }
+                ctx.fillText(mark[i], manager.aeraMarkLeft + manager.markWidth / 2 + manager.markWidth * i, y);
+            }
+
+            ctx.fillStyle = manager.originColorHightLight;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColorHightLight;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+
+            let x = manager.aeraMarkLeft + manager.markWidth / 2;
+            if (manager.mark[index][jndex] == '?') {
+                x += manager.markWidth;
+            } else if (manager.mark[index][jndex] == '1') {
+                x += manager.markWidth * 2;
+            }
+
+            ctx.fillText(manager.mark[index][jndex], x, y);
+            ctx.shadowColor = manager.lightColorHightLight;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;
+            ctx.fillText(manager.mark[index][jndex], x, y);
+        }
+
+        function drawString(ctx, manager) {
+            ctx.strokeStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+
+            for (let i = 0; i < manager.ans.length; ++i) {
+                for (let j = 0; j < manager.ans[i].length; ++j) {
+                    let y1 = manager.aeraStringTop + i * manager.girdHeight;
+                    let y2 = manager.aeraStringTop + manager.ans[i][j] * manager.girdHeight;
+                    let x = manager.aeraStringLeft + i * manager.gridWidth + manager.gridWidth;
+                    const points = [];
+                    if (i == manager.ans[i][j]) {
+                        points.push([manager.aeraStringLeft + manager.nodeRadius, y1 - manager.stringOffset]);
+                        points.push([manager.aeraStringRight - manager.nodeRadius, y2 + manager.stringOffset]);
+                    } else {
+                        points.push([manager.aeraStringLeft + manager.nodeRadius, y1 - manager.stringOffset]);
+                        points.push([x, y1 - manager.stringOffset]);
+                        points.push([x, y2 + manager.stringOffset]);
+                        points.push([manager.aeraStringRight - manager.nodeRadius, y2 + manager.stringOffset]);
+                    }
+                    ctx.stroke(multiLine(points, 5));
+                }
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;   
+            for (let i = 0; i < manager.ans.length; ++i) {
+                for (let j = 0; j < manager.ans[i].length; ++j) {
+                    let y1 = manager.aeraStringTop + i * manager.girdHeight;
+                    let y2 = manager.aeraStringTop + manager.ans[i][j] * manager.girdHeight;
+                    let x = manager.aeraStringLeft + i * manager.gridWidth + manager.gridWidth;
+                    const points = [];
+                    if (i == manager.ans[i][j]) {
+                        points.push([manager.aeraStringLeft + manager.nodeRadius, y1 - manager.stringOffset]);
+                        points.push([manager.aeraStringRight - manager.nodeRadius, y2 + manager.stringOffset]);
+                    } else {
+                        points.push([manager.aeraStringLeft + manager.nodeRadius, y1 - manager.stringOffset]);
+                        points.push([x, y1 - manager.stringOffset]);
+                        points.push([x, y2 + manager.stringOffset]);
+                        points.push([manager.aeraStringRight - manager.nodeRadius, y2 + manager.stringOffset]);
+                    }
+                    ctx.stroke(multiLine(points, 5));
+                }
+            }
+        }
+
+        function drawSign(ctx, manager) {
+            ctx.font = `${manager.fontSize}px arial`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = manager.originColor;
+            ctx.shadowBlur = manager.shadowBlur;
+            ctx.shadowColor = manager.darkColor;
+            ctx.shadowOffsetX = manager.shadowOffset;
+            ctx.shadowOffsetY = manager.shadowOffset;
+            for (let i = 0; i < manager.signs.length; ++i) {
+                for (let j = 0; j < manager.signs[i].length; ++j) {
+                    let x = manager.aeraKeyOutLeft + j * manager.charWidth + i * manager.charWidth / 2 + manager.charWidth / 2;
+                    let y = manager.aeraKeyOutTop + i * manager.charWidth + manager.charWidth / 2;
+                    ctx.fillText(manager.signs[i][j], x, y);
+                }
+            }
+            ctx.shadowColor = manager.lightColor;
+            ctx.shadowOffsetX = -manager.shadowOffset;
+            ctx.shadowOffsetY = -manager.shadowOffset;      
+            for (let i = 0; i < manager.signs.length; ++i) {
+                for (let j = 0; j < manager.signs[i].length; ++j) {
+                    let x = manager.aeraKeyOutLeft + j * manager.charWidth + i * manager.charWidth / 2 + manager.charWidth / 2;
+                    let y = manager.aeraKeyOutTop + i * manager.charWidth + manager.charWidth / 2;
+                    ctx.fillText(manager.signs[i][j], x, y);
+                }
+            }  
+        }
+
+        function main(timestamp, manager) {
+            const ctx = manager.context;
+            ctx.clearRect(0, 0, manager.width, manager.height);
+
+            // ctx.strokeStyle = '#333333';
+            // ctx.stroke(roundRect(manager.aeraInLeft, manager.aeraInTop, manager.aeraInRight - manager.aeraInLeft, manager.aeraInBottom - manager.aeraInTop, 5));
+            // ctx.stroke(roundRect(manager.aeraOutLeft, manager.aeraOutTop, manager.aeraOutRight - manager.aeraOutLeft, manager.aeraOutBottom - manager.aeraOutTop, 5));
+            // ctx.stroke(roundRect(manager.aeraStringLeft, manager.aeraStringTop, manager.aeraStringRight - manager.aeraStringLeft, manager.aeraStringBottom - manager.aeraStringTop, 5));
+            // ctx.stroke(roundRect(manager.aeraKeyOutLeft, manager.aeraKeyOutTop, manager.aeraKeyOutRight - manager.aeraKeyOutLeft, manager.aeraKeyOutBottom - manager.aeraKeyOutTop, 5));
+            // ctx.stroke(roundRect(manager.aeraMarkLeft, manager.aeraMarkTop, manager.aeraMarkRight - manager.aeraMarkLeft, manager.aeraMarkBottom - manager.aeraMarkTop, 5));
+            // ctx.stroke(roundRect(manager.aeraKeyInLeft, manager.aeraKeyInTop, manager.aeraKeyInRight - manager.aeraKeyInLeft, manager.aeraKeyInBottom - manager.aeraKeyInTop, 5));
+            
+            drawIn(ctx, manager);
+            drawOut(ctx, manager);
+            drawMarkIn(ctx, manager);
+            drawMarkOut(ctx, manager);
+            drawKeyIn(ctx, manager);
+            drawMark(ctx, manager);
+            drawString(ctx, manager);
+            drawSign(ctx, manager);
+        }
+
+        function handle(event, manager) {
+            if (event.offsetX >= manager.aeraInLeft + manager.girdHeight / 2 && event.offsetX < manager.aeraInRight + manager.girdHeight / 2 &&
+                event.offsetY >= manager.aeraInTop && event.offsetY < manager.aeraInBottom) {
+                console.log('in');
+                let selectIn = Math.floor((event.offsetY - manager.aeraInTop) / manager.girdHeight);
+                manager.selectIn = selectIn == manager.selectIn ? -1 : selectIn;
+            }
+            if (event.offsetX >= manager.aeraOutLeft - manager.girdHeight / 2 && event.offsetX < manager.aeraOutRight - manager.girdHeight / 2 &&
+                event.offsetY >= manager.aeraOutTop && event.offsetY < manager.aeraOutBottom) {
+                console.log('out');
+                selectOut = Math.floor((event.offsetY - manager.aeraOutTop) / manager.girdHeight);
+                manager.selectOut = selectOut == manager.selectOut ? -1 : selectOut;
+            }
+            if (manager.selectIn >= 0 && manager.selectOut >= 0) {
+                let index = -1;
+                for (let i = 0; i < manager.ans[manager.selectIn].length; ++i) {
+                    if (manager.ans[manager.selectIn][i] == manager.selectOut) {
+                        index = i;
+                    }
+                }
+                if (index < 0) {
+                    manager.ans[manager.selectIn].push(manager.selectOut);
+                } else {
+                    manager.ans[manager.selectIn].splice(index, 1);
+                }
+                valid(manager);
+                manager.selectIn = -1;
+                manager.selectOut = -1;
+            }
+            if (event.offsetX >= manager.aeraMarkLeft && event.offsetX < manager.aeraMarkRight &&
+                event.offsetY >= manager.aeraMarkTop && event.offsetY < manager.aeraMarkBottom) {
+                console.log('mark');
+                manager.selectMark = Math.floor((event.offsetX - manager.aeraMarkLeft) / manager.markWidth);
+                if (manager.selectRow < 0 || manager.selectCol < 0) {
+                    return;
+                }
+                if (manager.selectIn < 0 && manager.selectOut < 0) {
+                    return;
+                }
+                const mark = '0?1';
+                const base = [0, 10, 19];
+                const index = manager.selectCol + base[manager.selectRow];
+                let jndex = -1;
+                if (manager.selectIn >= 0) {
+                    jndex = manager.selectIn;
+                } else {
+                    jndex = manager.selectOut + manager.stringInNum;
+                }
+                manager.mark[index][jndex] = mark[manager.selectMark];
+            }
+            if (event.offsetX >= manager.aeraKeyInLeft && event.offsetX < manager.aeraKeyInRight &&
+                event.offsetY >= manager.aeraKeyInTop && event.offsetY < manager.aeraKeyInBottom) {
+                console.log('keyin');
+                let row = Math.floor((event.offsetY - manager.aeraKeyInTop) / manager.charWidth);
+                let col = Math.floor((event.offsetX - manager.aeraKeyInLeft - manager.charWidth * row / 2) / manager.charWidth);
+                if (col >= 0 && col < manager.charset[row].length) {
+                    manager.selectCol = col;
+                    manager.selectRow = row;
+                }
+            }
+            console.log(manager);
+        }
+
+        function valid(manager) {
+            const signs = [];
+            for (let i = 0; i < manager.outSigns.length; ++i) {
+                let tmp = 0;
+                for (let j = 0; j < manager.ans.length; ++j) {
+                    for (let k = 0; k < manager.ans[j].length; ++k) {
+                        if ((manager.outSigns[i] & (1 << manager.ans[j][k])) == 0) {
+                            continue;
+                        }
+                        tmp |= (1 << j);
+                    }
+                }
+                console.log(tmp);
+                if (tmp in manager.in2char) {
+                    signs.push(manager.in2char[tmp]);
+                } else {
+                    signs.push('-');
+                }
+            }
+            manager.signs = [];
+            let cnt = 0;
+            for (let i = 0; i < manager.charset.length; ++i) {
+                let tmp = '';
+                for (let j = 0; j < manager.charset[i].length; ++j) {
+                    tmp += signs[cnt];
+                    cnt += 1;
+                }
+                manager.signs.push(tmp);
+            }
+        }
+
+
+        (function() {
+            const manager = initialize();
+            console.log(manager);
+
+            manager.canvas.addEventListener('click', function(event) {
+                handle(event, manager);
+            });    
+            valid(manager);
+            console.log(manager.signs);
+            function wrapper(timestamp) {
+                main(timestamp, manager);
+                manager.renderId = window.requestAnimationFrame(wrapper);
+            }
+            manager.renderId = window.requestAnimationFrame(wrapper);
+        })();
+    </script>
+</body>
+
+</html>
+    
