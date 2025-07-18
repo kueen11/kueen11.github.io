@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>黑白棋翻转游戏</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/font-awesome@4.7.0/css/font-awesome.min.css" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#3B82F6',
+            secondary: '#10B981',
+            dark: '#1E293B',
+            light: '#F8FAFC',
+            board: '#F59E0B',
+            invalid: '#EF4444',
+            valid: '#22C55E',
+          },
+          fontFamily: {
+            inter: ['Inter', 'sans-serif'],
+          },
+        },
+      }
+    }
+  </script>
+  <style type="text/tailwindcss">
+    @layer utilities {
+      .content-auto {
+        content-visibility: auto;
+      }
+      .text-shadow {
+        text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+      .board-shadow {
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+      }
+      .btn-hover {
+        @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1 active:translate-y-0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen font-inter text-dark flex flex-col items-center justify-center p-4">
+  <div class="max-w-4xl w-full bg-white rounded-2xl shadow-xl overflow-hidden board-shadow">
+    <!-- 游戏标题 -->
+    <header class="bg-primary text-white p-6 text-center">
+      <h1 class="text-[clamp(1.8rem,4vw,2.5rem)] font-bold text-shadow">黑白棋翻转游戏</h1>
+      <p class="text-slate-100 mt-2 text-[clamp(0.9rem,2vw,1.1rem)]">框选黑白子数量均不为零且白子多于黑子的区域进行翻转</p>
+    </header>
+    
+    <!-- 游戏主体 -->
+    <main class="p-6 md:p-8 flex flex-col lg:flex-row gap-8">
+      <!-- 游戏信息面板 -->
+      <div class="lg:w-1/3 space-y-6">
+        <div class="bg-slate-50 rounded-xl p-5 shadow-sm">
+          <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fa fa-info-circle text-primary mr-2"></i>游戏统计
+          </h2>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-600">有效框选黑子总数:</span>
+              <span id="valid-selection-black" class="font-bold text-xl text-dark">0</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-slate-50 rounded-xl p-5 shadow-sm">
+          <h2 class="text-xl font-bold text-slate-800 mb-4 flex items-center">
+            <i class="fa fa-square-o text-primary mr-2"></i>当前框选
+          </h2>
+          <div class="space-y-3">
+            <div class="flex justify-between items-center">
+              <span class="text-slate-600">黑子数量:</span>
+              <span id="selection-black" class="font-bold text-dark">0</span>
+            </div>
+            <div class="flex justify-between items-center">
+              <span class="text-slate-600">白子数量:</span>
+              <span id="selection-white" class="font-bold text-slate-300">0</span>
+            </div>
+          </div>
+        </div>
+        
+        <div class="flex gap-3">
+          <button id="restart-btn" class="flex-1 bg-primary hover:bg-primary/90 text-white font-bold py-3 px-6 rounded-lg btn-hover flex items-center justify-center">
+            <i class="fa fa-refresh mr-2"></i>重新开始
+          </button>
+          <button id="info-btn" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 px-4 rounded-lg btn-hover flex items-center justify-center">
+            <i class="fa fa-question"></i>
+          </button>
+        </div>
+      </div>
+      
+      <!-- 游戏棋盘 -->
+      <div class="lg:w-2/3 flex flex-col items-center">
+        <div class="relative w-full aspect-square max-w-lg board-shadow rounded-xl overflow-hidden">
+          <canvas id="game-board" class="w-full h-full bg-board"></canvas>
+          
+          <!-- 游戏提示遮罩 -->
+          <div id="game-overlay" class="absolute inset-0 bg-dark/50 flex items-center justify-center rounded-xl opacity-0 pointer-events-none transition-opacity duration-500">
+            <div class="bg-white p-6 rounded-xl text-center max-w-xs">
+              <h3 class="text-xl font-bold text-primary mb-2">游戏提示</h3>
+              <p class="text-slate-600 mb-4">在棋盘上拖动鼠标或手指来框选区域</p>
+              <button id="start-btn" class="bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg btn-hover">
+                开始游戏
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="mt-6 text-center text-slate-500 text-sm">
+          <p>拖动鼠标或手指进行框选，框选区域会实时显示</p>
+        </div>
+      </div>
+    </main>
+    
+    <!-- 游戏规则模态框 -->
+    <div id="rules-modal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 opacity-0 pointer-events-none transition-opacity duration-300">
+      <div class="bg-white rounded-xl max-w-md w-full mx-4 p-6 shadow-2xl transform transition-transform duration-300 scale-95">
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="text-xl font-bold text-primary">游戏规则</h3>
+          <button id="close-rules" class="text-slate-400 hover:text-slate-600">
+            <i class="fa fa-times text-xl"></i>
+          </button>
+        </div>
+        <div class="space-y-4 text-slate-600">
+          <p><span class="font-bold">1. 棋盘</span>: 10×10的网格，初始时随机分布50个黑子和50个白子</p>
+          <p><span class="font-bold">2. 框选规则</span>: 拖动鼠标或手指框选区域，有效框选需满足：</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>框选区域内必须同时有黑子和白子</li>
+            <li>框选区域内白子数量必须多于黑子数量</li>
+          </ul>
+          <p><span class="font-bold">3. 翻转</span>: 有效框选后，区域内所有棋子颜色翻转（黑→白，白→黑）</p>
+          <p><span class="font-bold">4. 目标</span>: 通过策略性框选，尽可能减少黑子数量</p>
+        </div>
+        <button id="close-rules-btn" class="mt-6 w-full bg-primary hover:bg-primary/90 text-white font-bold py-2 px-6 rounded-lg btn-hover">
+          了解规则，开始游戏
+        </button>
+      </div>
+    </div>
+  </div>
+  
+  <footer class="mt-8 text-center text-slate-400 text-sm">
+    <p>黑白棋翻转游戏 &copy; 2025</p>
+  </footer>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      // 获取DOM元素
+      const canvas = document.getElementById('game-board');
+      const ctx = canvas.getContext('2d');
+      const selectionBlackEl = document.getElementById('selection-black');
+      const selectionWhiteEl = document.getElementById('selection-white');
+      const validSelectionBlackEl = document.getElementById('valid-selection-black');
+      const restartBtn = document.getElementById('restart-btn');
+      const infoBtn = document.getElementById('info-btn');
+      const rulesModal = document.getElementById('rules-modal');
+      const closeRules = document.getElementById('close-rules');
+      const closeRulesBtn = document.getElementById('close-rules-btn');
+      const gameOverlay = document.getElementById('game-overlay');
+      const startBtn = document.getElementById('start-btn');
+      
+      // 游戏配置
+      const BOARD_SIZE = 10;
+      const CELL_STATES = {
+        BLACK: 0,
+        WHITE: 1
+      };
+      
+      // 游戏状态
+      let cellSize = 0;
+      let board = [];
+      let selectionStart = null;
+      let selectionEnd = null;
+      let blackCount = 0;
+      let whiteCount = 0;
+      let validSelectionBlackCount = 0;
+      let gameActive = false;
+      
+      // 初始化游戏
+      function initGame() {
+        // 设置Canvas尺寸
+        resizeCanvas();
+        
+        // 初始化棋盘
+        initializeBoard();
+        
+        // 绘制棋盘
+        drawBoard();
+        
+        // 更新计数
+        updateCounters();
+        
+        // 显示游戏提示
+        gameOverlay.style.opacity = '1';
+        gameOverlay.style.pointerEvents = 'auto';
+      }
+      
+      // 调整Canvas尺寸
+      function resizeCanvas() {
+        const container = canvas.parentElement;
+        const size = Math.min(container.clientWidth, container.clientHeight);
+        canvas.width = size;
+        canvas.height = size;
+        cellSize = size / BOARD_SIZE;
+      }
+      
+      // 初始化棋盘
+      function initializeBoard() {
+        // 创建空棋盘
+        board = Array(BOARD_SIZE).fill().map(() => Array(BOARD_SIZE).fill(null));
+        
+        // 初始化50个黑子和50个白子
+        let blackCells = 50;
+        let whiteCells = 50;
+        
+        // 创建一个包含所有位置的数组并打乱
+        const positions = [];
+        for (let i = 0; i < BOARD_SIZE; i++) {
+          for (let j = 0; j < BOARD_SIZE; j++) {
+            positions.push({ x: i, y: j });
+          }
+        }
+        
+        // 打乱数组
+        for (let i = positions.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [positions[i], positions[j]] = [positions[j], positions[i]];
+        }
+        
+        // 随机分配棋子
+        for (let i = 0; i < positions.length; i++) {
+          const { x, y } = positions[i];
+          if (i < 50) {
+            board[x][y] = CELL_STATES.BLACK;
+          } else {
+            board[x][y] = CELL_STATES.WHITE;
+          }
+        }
+        
+        // 重置游戏状态
+        selectionStart = null;
+        selectionEnd = null;
+        blackCount = 50;
+        whiteCount = 50;
+        validSelectionBlackCount = 0;
+        gameActive = false;
+      }
+      
+      // 绘制棋盘
+      function drawBoard() {
+        // 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制棋盘背景
+        ctx.fillStyle = '#F59E0B';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // 绘制网格线
+        ctx.strokeStyle = '#92400E';
+        ctx.lineWidth = 1;
+        
+        for (let i = 0; i <= BOARD_SIZE; i++) {
+          // 水平线
+          ctx.beginPath();
+          ctx.moveTo(0, i * cellSize);
+          ctx.lineTo(canvas.width, i * cellSize);
+          ctx.stroke();
+          
+          // 垂直线
+          ctx.beginPath();
+          ctx.moveTo(i * cellSize, 0);
+          ctx.lineTo(i * cellSize, canvas.height);
+          ctx.stroke();
+        }
+        
+        // 绘制棋子
+        for (let i = 0; i < BOARD_SIZE; i++) {
+          for (let j = 0; j < BOARD_SIZE; j++) {
+            if (board[i][j] !== null) {
+              drawCell(i, j, board[i][j]);
+            }
+          }
+        }
+        
+        // 绘制选择框
+        if (selectionStart && selectionEnd) {
+          drawSelection();
+        }
+      }
+      
+      // 绘制单个棋子
+      function drawCell(x, y, state) {
+        const centerX = x * cellSize + cellSize / 2;
+        const centerY = y * cellSize + cellSize / 2;
+        const radius = cellSize / 2 * 0.8;
+        
+        ctx.beginPath();
+        ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+        
+        // 设置阴影效果
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetX = 2;
+        ctx.shadowOffsetY = 2;
+        
+        // 根据状态填充颜色
+        if (state === CELL_STATES.BLACK) {
+          ctx.fillStyle = '#1E293B';
+        } else {
+          ctx.fillStyle = '#F8FAFC';
+          ctx.strokeStyle = '#E2E8F0';
+          ctx.lineWidth = 1;
+          ctx.stroke();
+        }
+        
+        ctx.fill();
+        
+        // 重置阴影
+        ctx.shadowColor = 'transparent';
+      }
+      
+      // 绘制选择框
+      function drawSelection() {
+        const startX = Math.min(selectionStart.x, selectionEnd.x);
+        const startY = Math.min(selectionStart.y, selectionEnd.y);
+        const endX = Math.max(selectionStart.x, selectionEnd.x);
+        const endY = Math.max(selectionStart.y, selectionEnd.y);
+        
+        const rectX = startX * cellSize;
+        const rectY = startY * cellSize;
+        const rectWidth = (endX - startX + 1) * cellSize;
+        const rectHeight = (endY - startY + 1) * cellSize;
+        
+        // 计算选择区域内的黑白子数量
+        const { black, white } = countSelection(startX, startY, endX, endY);
+        
+        // 根据选择是否有效设置不同的颜色
+        let isValid = false;
+        if (black > 0 && white > 0 && white > black) {
+          isValid = true;
+          ctx.strokeStyle = 'rgba(34, 197, 94, 0.8)'; // 有效选择 - 绿色
+          ctx.fillStyle = 'rgba(34, 197, 94, 0.2)';
+        } else {
+          ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)'; // 无效选择 - 红色
+          ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+        }
+        
+        // 更新选择信息显示
+        selectionBlackEl.textContent = black;
+        selectionWhiteEl.textContent = white;
+        
+        // 绘制半透明填充
+        ctx.fillRect(rectX, rectY, rectWidth, rectHeight);
+        
+        // 绘制边框
+        ctx.lineWidth = 2;
+        ctx.strokeRect(rectX, rectY, rectWidth, rectHeight);
+      }
+      
+      // 计算选择区域内的黑白子数量
+      function countSelection(startX, startY, endX, endY) {
+        let black = 0;
+        let white = 0;
+        
+        for (let x = startX; x <= endX; x++) {
+          for (let y = startY; y <= endY; y++) {
+            if (board[x][y] === CELL_STATES.BLACK) {
+              black++;
+            } else if (board[x][y] === CELL_STATES.WHITE) {
+              white++;
+            }
+          }
+        }
+        
+        return { black, white };
+      }
+      
+      // 翻转选择区域内的棋子
+      function flipSelection() {
+        if (!selectionStart || !selectionEnd) return;
+        
+        const startX = Math.min(selectionStart.x, selectionEnd.x);
+        const startY = Math.min(selectionStart.y, selectionEnd.y);
+        const endX = Math.max(selectionStart.x, selectionEnd.x);
+        const endY = Math.max(selectionStart.y, selectionEnd.y);
+        
+        // 计算选择区域内的黑白子数量
+        const { black, white } = countSelection(startX, startY, endX, endY);
+        
+        // 只有当选择有效时才翻转棋子
+        if (black > 0 && white > 0 && white > black) {
+          let flippedBlack = 0;
+          let flippedWhite = 0;
+          
+          // 翻转棋子
+          for (let x = startX; x <= endX; x++) {
+            for (let y = startY; y <= endY; y++) {
+              if (board[x][y] === CELL_STATES.BLACK) {
+                board[x][y] = CELL_STATES.WHITE;
+                flippedBlack++;
+              } else if (board[x][y] === CELL_STATES.WHITE) {
+                board[x][y] = CELL_STATES.BLACK;
+                flippedWhite++;
+              }
+            }
+          }
+          
+          // 更新计数
+          blackCount = blackCount - flippedBlack + flippedWhite;
+          whiteCount = whiteCount - flippedWhite + flippedBlack;
+          validSelectionBlackCount += black;
+          
+          // 更新显示
+          updateCounters();
+          
+          // 添加翻转动画效果
+          animateFlip(startX, startY, endX, endY);
+        }
+        
+        // 无论选择是否有效，都重置选择
+        selectionStart = null;
+        selectionEnd = null;
+        
+        // 延迟后重绘棋盘
+        setTimeout(() => {
+          drawBoard();
+        }, 300);
+      }
+      
+      // 翻转动画效果
+      function animateFlip(startX, startY, endX, endY) {
+        const totalFrames = 10;
+        let frame = 0;
+        
+        function animate() {
+          if (frame > totalFrames) {
+            return;
+          }
+          
+          // 清除之前的动画帧
+          ctx.clearRect(
+            startX * cellSize, 
+            startY * cellSize, 
+            (endX - startX + 1) * cellSize, 
+            (endY - startY + 1) * cellSize
+          );
+          
+          // 重绘网格线
+          ctx.strokeStyle = '#92400E';
+          ctx.lineWidth = 1;
+          
+          for (let i = startX; i <= endX + 1; i++) {
+            ctx.beginPath();
+            ctx.moveTo(i * cellSize, startY * cellSize);
+            ctx.lineTo(i * cellSize, (endY + 1) * cellSize);
+            ctx.stroke();
+          }
+          
+          for (let j = startY; j <= endY + 1; j++) {
+            ctx.beginPath();
+            ctx.moveTo(startX * cellSize, j * cellSize);
+            ctx.lineTo((endX + 1) * cellSize, j * cellSize);
+            ctx.stroke();
+          }
+          
+          // 绘制动画中的棋子
+          const radiusFactor = 1 - Math.abs(0.5 - frame / totalFrames) * 2;
+          
+          for (let x = startX; x <= endX; x++) {
+            for (let y = startY; y <= endY; y++) {
+              const centerX = x * cellSize + cellSize / 2;
+              const centerY = y * cellSize + cellSize / 2;
+              const radius = cellSize / 2 * 0.8 * radiusFactor;
+              
+              ctx.beginPath();
+              ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+              
+              // 设置阴影效果
+              ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+              ctx.shadowBlur = 5;
+              ctx.shadowOffsetX = 2;
+              ctx.shadowOffsetY = 2;
+              
+              // 根据状态填充颜色
+              if (board[x][y] === CELL_STATES.BLACK) {
+                ctx.fillStyle = '#1E293B';
+              } else {
+                ctx.fillStyle = '#F8FAFC';
+                ctx.strokeStyle = '#E2E8F0';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+              }
+              
+              ctx.fill();
+              
+              // 重置阴影
+              ctx.shadowColor = 'transparent';
+            }
+          }
+          
+          frame++;
+          requestAnimationFrame(animate);
+        }
+        
+        animate();
+      }
+      
+      // 更新计数器显示
+      function updateCounters() {
+        validSelectionBlackEl.textContent = validSelectionBlackCount;
+      }
+      
+      // 坐标转换：从屏幕坐标到棋盘坐标
+      function screenToBoard(x, y) {
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        
+        const boardX = Math.floor((x - rect.left) * scaleX / cellSize);
+        const boardY = Math.floor((y - rect.top) * scaleY / cellSize);
+        
+        return {
+          x: Math.max(0, Math.min(BOARD_SIZE - 1, boardX)),
+          y: Math.max(0, Math.min(BOARD_SIZE - 1, boardY))
+        };
+      }
+      
+      // 事件处理：鼠标按下
+      function handleMouseDown(e) {
+        if (!gameActive) return;
+        
+        const { x, y } = screenToBoard(e.clientX, e.clientY);
+        selectionStart = { x, y };
+        selectionEnd = { x, y };
+        drawBoard();
+      }
+      
+      // 事件处理：鼠标移动
+      function handleMouseMove(e) {
+        if (!gameActive || !selectionStart) return;
+        
+        const { x, y } = screenToBoard(e.clientX, e.clientY);
+        selectionEnd = { x, y };
+        drawBoard();
+      }
+      
+      // 事件处理：鼠标释放
+      function handleMouseUp() {
+        if (!gameActive || !selectionStart) return;
+        
+        flipSelection();
+        drawBoard();
+      }
+      
+      // 事件处理：触摸开始
+      function handleTouchStart(e) {
+        if (!gameActive) return;
+        
+        const touch = e.touches[0];
+        const { x, y } = screenToBoard(touch.clientX, touch.clientY);
+        selectionStart = { x, y };
+        selectionEnd = { x, y };
+        e.preventDefault();
+        drawBoard();
+      }
+      
+      // 事件处理：触摸移动
+      function handleTouchMove(e) {
+        if (!gameActive || !selectionStart) return;
+        
+        const touch = e.touches[0];
+        const { x, y } = screenToBoard(touch.clientX, touch.clientY);
+        selectionEnd = { x, y };
+        e.preventDefault();
+        drawBoard();
+      }
+      
+      // 事件处理：触摸结束
+      function handleTouchEnd() {
+        if (!gameActive || !selectionStart) return;
+        
+        flipSelection();
+        drawBoard();
+      }
+      
+      // 窗口大小改变事件
+      function handleResize() {
+        resizeCanvas();
+        drawBoard();
+      }
+      
+      // 显示游戏规则
+      function showRules() {
+        rulesModal.style.opacity = '1';
+        rulesModal.style.pointerEvents = 'auto';
+      }
+      
+      // 隐藏游戏规则
+      function hideRules() {
+        rulesModal.style.opacity = '0';
+        rulesModal.style.pointerEvents = 'none';
+      }
+      
+      // 开始游戏
+      function startGame() {
+        gameActive = true;
+        gameOverlay.style.opacity = '0';
+        gameOverlay.style.pointerEvents = 'none';
+      }
+      
+      // 重新开始游戏
+      function restartGame() {
+        initializeBoard();
+        drawBoard();
+        updateCounters();
+        gameActive = false;
+        gameOverlay.style.opacity = '1';
+        gameOverlay.style.pointerEvents = 'auto';
+      }
+      
+      // 注册事件监听器
+      canvas.addEventListener('mousedown', handleMouseDown);
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      
+      canvas.addEventListener('touchstart', handleTouchStart);
+      canvas.addEventListener('touchmove', handleTouchMove);
+      canvas.addEventListener('touchend', handleTouchEnd);
+      
+      window.addEventListener('resize', handleResize);
+      restartBtn.addEventListener('click', restartGame);
+      infoBtn.addEventListener('click', showRules);
+      closeRules.addEventListener('click', hideRules);
+      closeRulesBtn.addEventListener('click', hideRules);
+      startBtn.addEventListener('click', startGame);
+      
+      // 初始化游戏
+      initGame();
+    });
+  </script>
+</body>
+</html>
+    
