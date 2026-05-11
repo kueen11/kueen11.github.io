@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>逻辑方阵：信号接驳解谜</title>
+    <style>
+        :root {
+            --bg-color: #1e1e2e;
+            --card-bg: #2a2a3c;
+            --text-color: #cdd6f4;
+            --accent-color: #89b4fa;
+            --success-bg: rgba(166, 227, 161, 0.15);
+            --success-border: #a6e3a1;
+            --warn-color: #f9e2af;
+            --error-color: #f38ba8;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            margin: 0;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            background-color: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+        }
+
+        h1 { text-align: center; color: var(--accent-color); margin-top: 0; }
+
+        .instructions {
+            background-color: rgba(0,0,0,0.2);
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--accent-color);
+            margin-bottom: 20px;
+            font-size: 0.95em;
+            line-height: 1.6;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            align-items: center;
+        }
+
+        button {
+            background-color: var(--accent-color);
+            color: #111;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 1em;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.96); }
+
+        .game-board {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 10px;
+        }
+
+        .row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 5px 10px;
+            border-radius: 8px;
+            transition: background-color 0.3s, border 0.3s;
+            border: 1px solid transparent;
+        }
+
+        /* 整行正确的样式 */
+        .row-correct {
+            background-color: var(--success-bg);
+            border: 1px solid var(--success-border);
+        }
+
+        .row-label {
+            width: 40px;
+            text-align: center;
+            font-weight: bold;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            font-size: 0.9em;
+        }
+
+        .cell {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 1.8em;
+            cursor: pointer;
+            border-radius: 50%;
+            transition: background-color 0.2s, transform 0.2s;
+            user-select: none;
+        }
+
+        .cell:hover { background-color: rgba(255,255,255,0.05); }
+        .cell.selected { background-color: rgba(137, 180, 250, 0.3); transform: scale(1.1); border: 2px solid var(--accent-color); }
+
+        .decoded-number {
+            width: 50px;
+            text-align: center;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: var(--text-color);
+            padding: 5px;
+            border-radius: 4px;
+            background-color: rgba(0,0,0,0.2);
+        }
+
+        .col-headers {
+            display: flex;
+            gap: 10px;
+            margin-left: 60px; 
+            margin-bottom: 5px;
+        }
+        .col-header {
+            width: 40px;
+            text-align: center;
+            font-size: 0.8em;
+            color: #6c7086;
+        }
+
+        #message {
+            text-align: center;
+            margin-top: 20px;
+            font-size: 1.2em;
+            font-weight: bold;
+            height: 30px;
+            color: var(--success-border);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>🔌 逻辑方阵：信号接驳解谜</h1>
+    
+    <div class="instructions">
+        <strong>🎮 游戏说明：</strong><br>
+        1. <strong>目标：</strong>通过交换列，让右侧【还原出的数字】从上到下依次变成 1, 2, 3... 的顺序，并使所有行变成绿色高亮。<br>
+        2. <strong>操作：</strong>依次点击矩阵上方的两个列（圆圈），即可交换这两列的位置。<br>
+        3. <strong>状态：</strong>✅ 正确（整行高亮）| ❗️ 有数字但不正确 | ❌ 无对应数字
+    </div>
+
+    <div class="controls">
+        <label>维度 N (偶数): <input type="number" id="dimension" value="6" min="4" max="10" style="width: 50px; padding: 5px;"></label>
+        <button onclick="initGame()">🔄 重新开始</button>
+    </div>
+
+    <div class="col-headers" id="colHeaders"></div>
+    <div class="game-board" id="gameBoard"></div>
+    <div id="message"></div>
+</div>
+
+<script>
+    let N = 6;
+    let originalSignals = {};
+    let correctWiring = [];
+    let playerGuess = [];
+    let selectedCol = null;
+
+    function initGame() {
+        const inputN = parseInt(document.getElementById('dimension').value);
+        if (inputN % 2 !== 0) {
+            alert("维度 N 必须是偶数！");
+            return;
+        }
+        N = inputN;
+        document.getElementById('message').innerText = "";
+        selectedCol = null;
+
+        // 1. 生成去重的原始信号
+        originalSignals = {};
+        let usedSignatures = new Set(); 
+        for (let num = 1; num <= N; num++) {
+            let signal;
+            let signature;
+            do {
+                signal = Array(N).fill(0);
+                for (let i = 0; i < N / 2; i++) signal[i] = 1;
+                signal.sort(() => Math.random() - 0.5);
+                signature = signal.join('');
+            } while (usedSignatures.has(signature));
+            usedSignatures.add(signature);
+            originalSignals[num] = signal;
+        }
+
+        // 2. 随机生成正确接驳顺序
+        correctWiring = Array.from({length: N}, (_, i) => i);
+        correctWiring.sort(() => Math.random() - 0.5);
+
+        // 3. 玩家当前猜测
+        playerGuess = Array.from({length: N}, (_, i) => i);
+
+        renderBoard();
+    }
+
+    function getCurrentMatrix() {
+        let matrix = {};
+        for (let num = 1; num <= N; num++) {
+            let currentRow = new Array(N).fill(0);
+            let origRow = originalSignals[num];
+            for (let i = 0; i < N; i++) {
+                currentRow[i] = origRow[playerGuess[i]];
+            }
+            matrix[num] = currentRow;
+        }
+        return matrix;
+    }
+
+    function getDecodedNumber(currentRow) {
+        let restoredRow = new Array(N).fill(0);
+        for (let i = 0; i < N; i++) {
+            restoredRow[correctWiring[i]] = currentRow[i];
+        }
+        for (let num = 1; num <= N; num++) {
+            if (JSON.stringify(originalSignals[num]) === JSON.stringify(restoredRow)) {
+                return num;
+            }
+        }
+        return null;
+    }
+
+    function renderBoard() {
+        const board = document.getElementById('gameBoard');
+        const headers = document.getElementById('colHeaders');
+        board.innerHTML = '';
+        headers.innerHTML = '';
+
+        for (let i = 0; i < N; i++) {
+            let header = document.createElement('div');
+            header.className = 'col-header';
+            header.innerText = `列 ${i + 1}`;
+            headers.appendChild(header);
+        }
+
+        const currentMatrix = getCurrentMatrix();
+        let allCorrect = true;
+
+        for (let num = 1; num <= N; num++) {
+            let rowDiv = document.createElement('div');
+            rowDiv.className = 'row';
+
+            let decoded = getDecodedNumber(currentMatrix[num]);
+            let statusIcon = '';
+
+            if (decoded === num) {
+                // 正确：整行加高亮样式
+                rowDiv.classList.add('row-correct');
+                statusIcon = '✅';
+            } else if (decoded !== null) {
+                // 有数字但不正确
+                statusIcon = '❗️';
+                allCorrect = false;
+            } else {
+                // 无对应数字
+                statusIcon = '❌';
+                allCorrect = false;
+            }
+
+            // 左侧行号 + 状态图标
+            let label = document.createElement('div');
+            label.className = 'row-label';
+            label.innerHTML = `${statusIcon} ${num}`;
+            rowDiv.appendChild(label);
+
+            // 信号圆圈
+            let row = currentMatrix[num];
+            for (let i = 0; i < N; i++) {
+                let cell = document.createElement('div');
+                cell.className = 'cell';
+                cell.innerText = row[i] === 1 ? '●' : '○';
+                cell.onclick = () => handleColClick(i);
+                if (selectedCol === i) cell.classList.add('selected');
+                rowDiv.appendChild(cell);
+            }
+
+            // 右侧还原出的数字
+            let decodedDiv = document.createElement('div');
+            decodedDiv.className = 'decoded-number';
+            decodedDiv.innerText = decoded !== null ? decoded : '?';
+            rowDiv.appendChild(decodedDiv);
+
+            board.appendChild(rowDiv);
+        }
+
+        if (allCorrect) {
+            document.getElementById('message').innerText = "🎉 恭喜！你成功还原了所有信号的逻辑接驳！";
+        }
+    }
+
+    function handleColClick(colIndex) {
+        if (document.getElementById('message').innerText !== "") return;
+        if (selectedCol === null) {
+            selectedCol = colIndex;
+        } else if (selectedCol === colIndex) {
+            selectedCol = null;
+        } else {
+            let temp = playerGuess[selectedCol];
+            playerGuess[selectedCol] = playerGuess[colIndex];
+            playerGuess[colIndex] = temp;
+            selectedCol = null;
+        }
+        renderBoard();
+    }
+
+    initGame();
+</script>
+
+</body>
+</html>
