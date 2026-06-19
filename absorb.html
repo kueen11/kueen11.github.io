@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>吸星矩阵 (Gravity Matrix)</title>
+    <style>
+        :root {
+            --bg-color: #1a1a2e;
+            --board-bg: #16213e;
+            --cell-bg: #0f3460;
+            --text-color: #e94560;
+        }
+        body {
+            margin: 0; padding: 0;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            min-height: 100vh;
+            background-color: var(--bg-color);
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            overflow: hidden;
+        }
+        h1 { margin-bottom: 5px; font-size: 2rem; color: var(--text-color); text-shadow: 0 0 10px rgba(233,69,96,0.5); }
+        .stats { margin-bottom: 15px; font-size: 1.2rem; opacity: 0.9; }
+        .stats span { color: var(--text-color); font-weight: bold; margin: 0 10px; }
+
+        #board {
+            display: grid;
+            grid-template-columns: repeat(10, 1fr);
+            gap: 4px; padding: 10px;
+            background-color: var(--board-bg);
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            touch-action: none;
+        }
+        .cell {
+            width: 45px; height: 45px;
+            display: flex; align-items: center; justify-content: center;
+            background-color: var(--cell-bg);
+            border-radius: 4px;
+            font-size: 1.2rem; font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.1s, background-color 0.2s;
+            user-select: none;
+        }
+        .cell:hover:not(.empty) { transform: scale(1.1); z-index: 10; }
+        .cell.empty { cursor: default; opacity: 0.3; }
+        
+        .cell[data-val="0"] { color: transparent; }
+        .cell[data-val="1"], .cell[data-val="2"], .cell[data-val="3"] { color: #a8dadc; }
+        .cell[data-val="4"], .cell[data-val="5"], .cell[data-val="6"] { color: #457b9d; }
+        .cell[data-val="7"], .cell[data-val="8"], .cell[data-val="9"] { color: #e94560; }
+        .cell.big-number { color: #ffd700 !important; text-shadow: 0 0 8px #ffd700; font-size: 1rem; }
+
+        button {
+            margin-top: 20px; padding: 10px 30px; font-size: 1rem;
+            border: none; border-radius: 20px;
+            background: var(--text-color); color: white; cursor: pointer; transition: 0.3s;
+        }
+        button:hover { background: #ff6b81; transform: translateY(-2px); }
+
+        /* 通用遮罩层样式 */
+        .overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            backdrop-filter: blur(5px);
+        }
+        .overlay h2 { font-size: 2.5rem; color: var(--text-color); margin-bottom: 20px; text-align: center;}
+        .overlay p { font-size: 1.2rem; margin-bottom: 20px; text-align: center; max-width: 600px; line-height: 1.6;}
+
+        /* 游戏说明专属样式 */
+        .rules-box {
+            background: rgba(255,255,255,0.05);
+            padding: 20px 30px;
+            border-radius: 10px;
+            border-left: 4px solid var(--text-color);
+            text-align: left;
+            margin-bottom: 25px;
+            max-width: 500px;
+        }
+        .rules-box ul { padding-left: 20px; margin: 0; }
+        .rules-box li { margin-bottom: 10px; font-size: 1rem; line-height: 1.5; color: #ddd; }
+        .rules-box strong { color: var(--text-color); }
+    </style>
+</head>
+<body>
+
+    <h1>吸星矩阵</h1>
+    <div class="stats">
+        当前最高: <span id="current-max">0</span> | 
+        历史最高: <span id="history-max">0</span>
+    </div>
+    <div id="board"></div>
+    <button onclick="game.init()">重新开始</button>
+
+    <!-- 游戏结束遮罩 -->
+    <div id="game-over-overlay" class="overlay" style="display:none;">
+        <h2>孤岛形成，游戏结束</h2>
+        <p>最终最高数字: <span id="final-score" style="color:#ffd700; font-size:2rem;"></span></p>
+        <button onclick="game.init(); document.getElementById('game-over-overlay').style.display='none';">再来一局</button>
+    </div>
+
+    <!-- 游戏说明遮罩 -->
+    <div id="rules-overlay" class="overlay">
+        <h2>🌌 吸星矩阵 · 游戏指南</h2>
+        <div class="rules-box">
+            <ul>
+                <li><strong>绝对守恒：</strong>棋盘上严格包含 0~9 的数字各 10 个，总和永远为 450。</li>
+                <li><strong>吸星机制：</strong>点击非零格子，将紧邻的格子数值累加到中心。</li>
+                <li><strong>四向聚拢：</strong>该方向上的所有数字像多米诺骨牌一样向中心平移一格，最外侧自动补 0。</li>
+                <li><strong>禁区限制：</strong>不能点击 0，且射线遇到 0 会立刻停止，无法穿透吸取。</li>
+                <li><strong>终局判定：</strong>当所有非零数字上下左右都没有相邻数字（形成孤岛）时，游戏结束。</li>
+                <li><strong>终极目标：</strong>巧妙规划空间，挑战单次吸星产生的最高数值！</li>
+            </ul>
+        </div>
+        <button onclick="document.getElementById('rules-overlay').style.display='none';">我已了解，开始游戏</button>
+    </div>
+
+<script>
+class GravityMatrixGame {
+    constructor() {
+        this.size = 10;
+        this.board = [];
+        this.maxVal = 0;
+        this.historyMax = parseInt(localStorage.getItem('gravityMatrixHistory') || '0');
+        this.directions = [
+            {x: 0, y: -1}, // 上
+            {x: 0, y: 1},  // 下
+            {x: -1, y: 0}, // 左
+            {x: 1, y: 0}   // 右
+        ];
+        
+        this.boardEl = document.getElementById('board');
+        this.currentMaxEl = document.getElementById('current-max');
+        this.historyMaxEl = document.getElementById('history-max');
+        
+        this.init();
+    }
+
+    init() {
+        this.maxVal = 0;
+        let nums = [];
+        for(let i=0; i<=9; i++) {
+            for(let j=0; j<10; j++) nums.push(i);
+        }
+        // Fisher-Yates 洗牌
+        for (let i = nums.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [nums[i], nums[j]] = [nums[j], nums[i]];
+        }
+        
+        this.board = [];
+        for(let y=0; y<this.size; y++) {
+            let row = [];
+            for(let x=0; x<this.size; x++) {
+                row.push(nums[y * this.size + x]);
+            }
+            this.board.push(row);
+        }
+        
+        this.updateMax();
+        this.render();
+    }
+
+    absorb(cx, cy) {
+        const centerVal = this.board[cy][cx];
+        if (centerVal === 0) return; 
+
+        let changed = false;
+
+        for (let dir of this.directions) {
+            let nx = cx + dir.x;
+            let ny = cy + dir.y;
+            
+            let path = [];
+            while (nx >= 0 && nx < this.size && ny >= 0 && ny < this.size) {
+                let val = this.board[ny][nx];
+                path.push({x: nx, y: ny, val: val});
+                if (val === 0) break; 
+                nx += dir.x;
+                ny += dir.y;
+            }
+
+            if (path.length > 0 && path[0].val !== 0) {
+                changed = true;
+                this.board[cy][cx] += path[0].val;
+                
+                for (let i = 1; i < path.length; i++) {
+                    this.board[path[i-1].y][path[i-1].x] = path[i].val;
+                }
+                
+                let lastValid = path[path.length - 1];
+                this.board[lastValid.y][lastValid.x] = 0;
+            }
+        }
+
+        if (changed) {
+            this.updateMax();
+            this.render();
+            this.checkGameOver();
+        }
+    }
+
+    checkGameOver() {
+        for (let y = 0; y < this.size; y++) {
+            for (let x = 0; x < this.size; x++) {
+                if (this.board[y][x] !== 0) {
+                    for (let dir of this.directions) {
+                        let nx = x + dir.x;
+                        let ny = y + dir.y;
+                        if (nx >= 0 && nx < this.size && ny >= 0 && ny < this.size) {
+                            if (this.board[ny][nx] !== 0) return; 
+                        }
+                    }
+                }
+            }
+        }
+        this.gameOver();
+    }
+
+    gameOver() {
+        document.getElementById('final-score').textContent = this.maxVal;
+        document.getElementById('game-over-overlay').style.display = 'flex';
+    }
+
+    updateMax() {
+        let currentMax = 0;
+        for(let y=0; y<this.size; y++) {
+            for(let x=0; x<this.size; x++) {
+                if(this.board[y][x] > currentMax) currentMax = this.board[y][x];
+            }
+        }
+        this.maxVal = currentMax;
+        this.currentMaxEl.textContent = this.maxVal;
+        
+        if (this.maxVal > this.historyMax) {
+            this.historyMax = this.maxVal;
+            localStorage.setItem('gravityMatrixHistory', this.historyMax);
+        }
+        this.historyMaxEl.textContent = this.historyMax;
+    }
+
+    render() {
+        this.boardEl.innerHTML = '';
+        for(let y=0; y<this.size; y++) {
+            for(let x=0; x<this.size; x++) {
+                const val = this.board[y][x];
+                const cell = document.createElement('div');
+                cell.className = 'cell' + (val === 0 ? ' empty' : '');
+                cell.textContent = val === 0 ? '' : val;
+                cell.dataset.val = val;
+                if (val >= 10) cell.classList.add('big-number');
+                cell.onclick = () => this.absorb(x, y);
+                this.boardEl.appendChild(cell);
+            }
+        }
+    }
+}
+
+const game = new GravityMatrixGame();
+</script>
+</body>
+</html>
