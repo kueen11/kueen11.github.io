@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>射线消除连通游戏</title>
+    <style>
+        :root {
+            --bg-color: #0f172a;          /* 深邃的藏青背景 */
+            --board-bg: #1e293b;          /* 稍浅的棋盘底色 */
+            --cell-1: #0f172a;            /* 1的格子：高亮霓虹绿 */
+            --cell-0: #334155;            /* 0的格子：暗灰蓝 */
+            --text-color: #e2e8f0;        /* 主文字：浅灰白 */
+            --highlight: #f87171;         /* 提示文字：亮珊瑚红 */
+            --btn-bg: #3b82f6;            /* 按钮：亮蓝色 */
+            --btn-hover: #2563eb;         /* 按钮悬停：深蓝 */
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            user-select: none;
+        }
+
+        .info-bar { 
+            margin-bottom: 15px; 
+            font-size: 1.4rem; 
+            font-weight: bold; 
+            color: var(--text-color);
+            letter-spacing: 1px;
+        }
+        
+        .message { 
+            height: 24px; 
+            margin-bottom: 15px; 
+            font-weight: bold; 
+            color: var(--highlight);
+            transition: opacity 0.3s;
+        }
+
+        #board {
+            display: grid;
+            gap: 6px;
+            background-color: var(--board-bg);
+            padding: 15px;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5); /* 深色模式需要更重的阴影 */
+        }
+
+        .cell {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.15s ease, background-color 0.2s, filter 0.2s;
+        }
+
+        .cell.type-1 { 
+            background-color: var(--cell-1); 
+            color: #fff; 
+        }
+
+        .cell.type-0 { 
+            background-color: var(--cell-0); 
+            cursor: default; 
+        }
+
+        .cell.forbidden { 
+            cursor: not-allowed; 
+            position: relative;
+        }
+        
+        /* 红色 X：在深色背景下使用亮红色，并加微弱发光 */
+        .cell.forbidden::after {
+            content: '✖';
+            color: #ef4444; 
+            font-size: 2rem;
+            text-shadow: 0 0 6px rgba(239, 68, 68, 0.6); 
+            pointer-events: none; 
+        }
+
+        .cell.type-1:not(.forbidden):hover { 
+            transform: scale(1.1); 
+            filter: brightness(1.2); 
+        }
+
+        .controls { margin-top: 25px; display: flex; gap: 15px; }
+        button {
+            padding: 10px 25px;
+            border: none;
+            border-radius: 8px;
+            background: var(--btn-bg);
+            color: white;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: background 0.2s, transform 0.1s;
+        }
+        button:hover { background: var(--btn-hover); transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        button.secondary { background: #475569; color: var(--text-color); }
+        button.secondary:hover { background: #64748b; }
+    </style>
+</head>
+<body>
+
+    <div class="info-bar">步数: <span id="steps">0</span> | 剩余: <span id="remaining">0</span></div>
+    <div class="message" id="message"></div>
+    <div id="board"></div>
+    <div class="controls">
+        <button class="secondary" onclick="game.undo()">撤销 (U)</button>
+        <button onclick="game.init()">重新开始</button>
+        <button class="secondary" onclick="alert('按 Q 或点击退出按钮退出')">退出 (Q)</button>
+    </div>
+
+<script>
+class RayConnectGame {
+    constructor(rows, cols) {
+        this.rows = rows;
+        this.cols = cols;
+        this.grid = [];
+        this.history = [];
+        this.steps = 0;
+        this.gameOver = false;
+        
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'u' || e.key === 'U') this.undo();
+            if (e.key === 'q' || e.key === 'Q') {
+                if(confirm('确定要退出游戏吗？')) location.reload();
+            }
+        });
+
+        this.init();
+    }
+
+    init() {
+        this.gameOver = false;
+        this.steps = 0;
+        this.history = [];
+        this.generateBoard();
+        this.render();
+        this.updateInfo();
+        this.showMessage('');
+    }
+
+    generateBoard() {
+        this.grid = Array(this.rows).fill(null).map(() => Array(this.cols).fill(1));
+        let zerosPlaced = 0;
+        const targetZeros = this.rows; 
+        let safetyCounter = 0; 
+
+        while (zerosPlaced < targetZeros && safetyCounter < 10000) {
+            safetyCounter++;
+            const r = Math.floor(Math.random() * this.rows);
+            const c = Math.floor(Math.random() * this.cols);
+
+            if (this.grid[r][c] === 0) continue;
+
+            this.grid[r][c] = 0;
+            if (!this.isRemainingConnected(new Set([`${r},${c}`]))) {
+                this.grid[r][c] = 1; 
+            } else {
+                zerosPlaced++; 
+            }
+        }
+    }
+
+    isRemainingConnected(excludeSet) {
+        const ones = [];
+        for (let r = 0; r < this.rows; r++)
+            for (let c = 0; c < this.cols; c++)
+                if (this.grid[r][c] === 1 && !excludeSet.has(`${r},${c}`)) 
+                    ones.push([r, c]);
+
+        if (ones.length <= 1) return true; 
+
+        const visited = new Set();
+        const stack = [ones[0]];
+        visited.add(`${ones[0][0]},${ones[0][1]}`);
+
+        while (stack.length > 0) {
+            const [cr, cc] = stack.pop();
+            const dirs = [[0,1],[0,-1],[1,0],[-1,0]];
+            for (const [dr, dc] of dirs) {
+                const nr = cr + dr, nc = cc + dc;
+                const key = `${nr},${nc}`;
+                if (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols &&
+                    this.grid[nr][nc] === 1 && !excludeSet.has(key) && !visited.has(key)) {
+                    visited.add(key);
+                    stack.push([nr, nc]);
+                }
+            }
+        }
+        return visited.size === ones.length;
+    }
+
+    getRayTargets(r, c) {
+        if (this.grid[r][c] !== 1) return null;
+
+        const targets = new Set(); 
+        
+        const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+        for (const [dr, dc] of dirs) {
+            let nr = r + dr, nc = c + dc;
+            let lastOne = null;
+            
+            while (nr >= 0 && nr < this.rows && nc >= 0 && nc < this.cols) {
+                if (this.grid[nr][nc] === 1) {
+                    lastOne = [nr, nc]; 
+                } else {
+                    break; 
+                }
+                nr += dr;
+                nc += dc;
+            }
+            
+            if (lastOne) {
+                targets.add(`${lastOne[0]},${lastOne[1]}`);
+            }
+        }
+        
+        if (targets.size === 0) return null; 
+
+        return targets;
+    }
+
+    move(r, c) {
+        if (this.gameOver) return;
+
+        const targets = this.getRayTargets(r, c);
+        if (!targets) {
+            this.showMessage('⚠️ 无效操作：中心点为0或四向无目标');
+            return;
+        }
+
+        if (!this.isRemainingConnected(targets)) {
+            this.showMessage('⛔ 禁止操作：该操作会切断连通性！');
+            return;
+        }
+
+        this.history.push({
+            grid: this.grid.map(row => [...row]),
+            steps: this.steps
+        });
+
+        for (const key of targets) {
+            const [tr, tc] = key.split(',').map(Number);
+            this.grid[tr][tc] = 0;
+        }
+
+        this.steps++;
+        this.render();
+        this.updateInfo();
+        this.checkGameState();
+    }
+
+    undo() {
+        if (this.history.length === 0) {
+            this.showMessage('⚠️ 没有可撤销的步骤');
+            return;
+        }
+        const prev = this.history.pop();
+        this.grid = prev.grid;
+        this.steps = prev.steps;
+        this.gameOver = false;
+        this.render();
+        this.updateInfo();
+        this.showMessage('↩️ 已撤销上一步');
+    }
+
+    checkGameState() {
+        const ones = this.getOnes();
+        if (ones.length === 1) {
+            this.gameOver = true;
+            this.showMessage('🎉 恭喜通关！剩下最后一个点无法消除。');
+            return;
+        }
+
+        let hasValidMove = false;
+        for (const [r, c] of ones) {
+            const targets = this.getRayTargets(r, c);
+            if (targets && this.isRemainingConnected(targets)) {
+                hasValidMove = true;
+                break;
+            }
+        }
+
+        if (!hasValidMove) {
+            this.gameOver = true;
+            this.showMessage('💀 死局！所有点都被标记为禁止操作。');
+        }
+    }
+
+    getOnes() {
+        const ones = [];
+        for (let r = 0; r < this.rows; r++)
+            for (let c = 0; c < this.cols; c++)
+                if (this.grid[r][c] === 1) ones.push([r, c]);
+        return ones;
+    }
+
+    render() {
+        const boardEl = document.getElementById('board');
+        boardEl.style.gridTemplateColumns = `repeat(${this.cols}, 50px)`;
+        boardEl.innerHTML = '';
+
+        const forbiddenSet = new Set();
+        if (!this.gameOver) {
+            const ones = this.getOnes();
+            for (const [r, c] of ones) {
+                const targets = this.getRayTargets(r, c);
+                if (!targets || !this.isRemainingConnected(targets)) {
+                    forbiddenSet.add(`${r},${c}`);
+                }
+            }
+        }
+
+        for (let r = 0; r < this.rows; r++) {
+            for (let c = 0; c < this.cols; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'cell';
+                const val = this.grid[r][c];
+                const key = `${r},${c}`;
+
+                if (val === 1) {
+                    if (forbiddenSet.has(key)) {
+                        cell.classList.add('type-1', 'forbidden');
+                    } else {
+                        cell.classList.add('type-1');
+                        cell.onclick = () => this.move(r, c);
+                    }
+                } else {
+                    cell.classList.add('type-0');
+                }
+                boardEl.appendChild(cell);
+            }
+        }
+    }
+
+    updateInfo() {
+        document.getElementById('steps').textContent = this.steps;
+        document.getElementById('remaining').textContent = this.getOnes().length;
+    }
+
+    showMessage(msg) {
+        const el = document.getElementById('message');
+        el.textContent = msg;
+        if (msg) {
+            el.style.opacity = 1;
+            clearTimeout(this._msgTimer);
+            this._msgTimer = setTimeout(() => { el.style.opacity = 0; }, 3000);
+        }
+    }
+}
+
+const game = new RayConnectGame(10, 10);
+
+</script>
+</body>
+</html>
