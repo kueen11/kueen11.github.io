@@ -716,7 +716,7 @@ body {
       const endpoints = getRayEndpoints(test, cr, cc);
       const changed = [];
       for (const [er, ec] of endpoints) {
-        if (test[er][ec] === 1 && (er !== cr || ec !== c)) {
+        if (test[er][ec] === 1 && (er !== cr || ec !== cc)) {
           test[er][ec] = 0;
           changed.push([er, ec]);
         }
