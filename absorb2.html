@@ -383,6 +383,19 @@ body {
         <option value="5" selected>5×5</option>
         <option value="6">6×6</option>
         <option value="7">7×7</option>
+        <option value="8">8×8</option>
+        <option value="9">9×9</option>
+        <option value="10">10×10</option>
+        <option value="11">11×11</option>
+        <option value="12">12×12</option>
+        <option value="13">13×13</option>
+        <option value="14">14×14</option>
+        <option value="15">15×15</option>
+        <option value="16">16×16</option>
+        <option value="17">17×17</option>
+        <option value="18">18×18</option>
+        <option value="19">19×19</option>
+        <option value="20">20×20</option>
       </select>
     </div>
   </div>
@@ -403,8 +416,6 @@ body {
 <script>
 (function() {
   // ============ Constants ============
-  const SOLVER_MAX_DEPTH = { 3: 10, 4: 10, 5: 8, 6: 6, 7: 5 };
-  const SOLVER_MAX_STATES = { 3: 3000, 4: 8000, 5: 15000, 6: 30000, 7: 50000 };
   const ANIM_SPEED = 45; // ms per ray cell
 
   // ============ DOM refs ============
@@ -441,49 +452,6 @@ body {
     return c;
   }
 
-  /**
-   * 4-connectivity check: are all 1s in g connected via up/down/left/right?
-   */
-  function isConnected(g) {
-    const sz = g.length;
-    // Find first 1 as BFS seed
-    let sr = -1, sc = -1;
-    for (let r = 0; r < sz; r++) {
-      for (let c = 0; c < sz; c++) {
-        if (g[r][c] === 1) { sr = r; sc = c; break; }
-      }
-      if (sr >= 0) break;
-    }
-    if (sr < 0) return true; // no 1s — vacuously connected
-
-    const visited = Array.from({ length: sz }, () => new Array(sz).fill(false));
-    const queue = [[sr, sc]];
-    visited[sr][sc] = true;
-    let connected = 0;
-    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
-    while (queue.length > 0) {
-      const [cr, cc] = queue.shift();
-      connected++;
-      for (const [dr, dc] of dirs) {
-        const nr = cr + dr, nc = cc + dc;
-        if (nr >= 0 && nr < sz && nc >= 0 && nc < sz &&
-            !visited[nr][nc] && g[nr][nc] === 1) {
-          visited[nr][nc] = true;
-          queue.push([nr, nc]);
-        }
-      }
-    }
-
-    // Compare BFS count with total 1s
-    let total = 0;
-    for (let r = 0; r < sz; r++)
-      for (let c = 0; c < sz; c++)
-        if (g[r][c] === 1) total++;
-
-    return connected === total;
-  }
-
   /** Get all positions where the value is 1 */
   function getAllOnes(g) {
     const ones = [];
@@ -494,31 +462,22 @@ body {
   }
 
   /**
-   * Find the first 0 in each of 4 directions from (r, c).
-   * Returns up to 4 positions (only those that are actually 0).
+   * Follow a chain of 1's in direction (dr,dc) starting from (nr,nc).
+   * Returns the position of the farthest 1 in the chain.
+   * (nr,nc) is assumed to be 1 and in-bounds.
    */
-  function getFirstZeros(g, r, c) {
+  function followChain(g, nr, nc, dr, dc) {
     const sz = g.length;
-    const result = [];
-
-    // Up (decreasing row)
-    for (let k = r - 1; k >= 0; k--) {
-      if (g[k][c] === 0) { result.push([k, c]); break; }
+    let far_r = nr, far_c = nc;
+    while (
+      far_r + dr >= 0 && far_r + dr < sz &&
+      far_c + dc >= 0 && far_c + dc < sz &&
+      g[far_r + dr][far_c + dc] === 1
+    ) {
+      far_r += dr;
+      far_c += dc;
     }
-    // Down (increasing row)
-    for (let k = r + 1; k < sz; k++) {
-      if (g[k][c] === 0) { result.push([k, c]); break; }
-    }
-    // Left (decreasing col)
-    for (let k = c - 1; k >= 0; k--) {
-      if (g[r][k] === 0) { result.push([r, k]); break; }
-    }
-    // Right (increasing col)
-    for (let k = c + 1; k < sz; k++) {
-      if (g[r][k] === 0) { result.push([r, k]); break; }
-    }
-
-    return result;
+    return [far_r, far_c];
   }
 
   /**
@@ -610,57 +569,110 @@ body {
   /**
    * Generate a solvable board with exactly sz zeros.
    *
-   * Algorithm (reverse expansion):
-   *   1. Seed a random cell with 1.
-   *   2. Randomly pick an existing 1-cell as centre.
-   *   3. Randomly pick 1~4 directions; for each, find the first 0 and set it to 1.
-   *   4. Repeat 2-3 until exactly sz zeros remain.
+   * Algorithm (reverse growth — ported from reverse_generate.py):
+   *   1. Start from a single 1-cell (the solved state), all others 0.
+   *   2. Randomly select a 1-cell as the "centre".
+   *   3. For each of its 4 directions:
+   *      - If no adjacent cell (centre on that edge): skip this direction.
+   *      - If adjacent cell is 0: randomly (50%) decide to grow (convert to 1).
+   *      - If adjacent cell is 1: follow the chain of 1's to the farthest end,
+   *        then grow at the cell just beyond it. If that cell is out of bounds:
+   *        the whole centre is invalid (hard invalidation).
+   *   4. Apply all growths (convert those 0-cells to 1).
+   *   5. Repeat until exactly sz zeros remain.
+   *   6. If all 1-cells cannot grow, restart from scratch.
    *
-   * Because we only ever *add* ones by flipping the first 0 in a direction,
-   * the forward moves taken in reverse order will undo the expansion and
-   * reduce the board back to a single 1 — the board is solvable by construction.
+   * This reverses the game's forward elimination: forward moves send rays
+   * from a centre to set endpoint cells to 0; reverse growth restores those
+   * endpoints from 0 to 1. The board is solvable by construction.
    */
   function generateBoard(sz) {
     const totalCells = sz * sz;
     const targetZeros = sz;
     const targetOnes = totalCells - targetZeros;
-    const maxAttempts = 30;
+    const maxAttempts = 500;
+    const growProb = 0.5;
+    const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
-      // --- Seed ---
+      // --- Step 1: seed a single 1-cell (the solved state) ---
       const g = Array.from({ length: sz }, () => new Array(sz).fill(0));
       const sr = Math.floor(Math.random() * sz);
       const sc = Math.floor(Math.random() * sz);
       g[sr][sc] = 1;
+      let zeroCount = totalCells - 1;
+      const growthSteps = []; // [{ center: [r,c], newOnes: [[r,c],...] }]
 
       let stalled = false;
 
-      // --- Expand until we hit targetOnes ---
-      while (countOnes(g) < targetOnes) {
-        const remaining = targetOnes - countOnes(g);
+      // --- Step 2–5: expand until exactly targetZeros zeros ---
+      while (zeroCount > targetZeros) {
         const allOnes = getAllOnes(g);
         shuffle(allOnes);
 
-        let madeProgress = false;
+        let grownThisStep = false;
         for (const [cr, cc] of allOnes) {
-          // Candidates: first 0 in each direction from this centre
-          const candidates = getFirstZeros(g, cr, cc);
-          if (candidates.length === 0) continue;
+          // Use a Set with string keys to deduplicate growth cells
+          const growSet = new Set();
+          let hardInvalid = false;
 
-          // Pick 1 ~ min(4, remaining, candidates.length) directions at random
-          const maxPick = Math.min(4, remaining, candidates.length);
-          const numDirs = Math.floor(Math.random() * maxPick) + 1;
+          for (const [dr, dc] of DIRS) {
+            const nr = cr + dr, nc = cc + dc;
 
-          shuffle(candidates);
-          for (let i = 0; i < numDirs; i++) {
-            g[candidates[i][0]][candidates[i][1]] = 1;
+            // Direction with no adjacent cell (centre on this edge):
+            // skip — no growth possible here.
+            if (nr < 0 || nr >= sz || nc < 0 || nc >= sz) continue;
+
+            if (g[nr][nc] === 0) {
+              // Adjacent to 0: randomly decide to grow into it
+              if (Math.random() < growProb) {
+                growSet.add(nr * sz + nc);
+              }
+            } else {
+              // Adjacent to 1: follow chain to farthest end
+              const [far_r, far_c] = followChain(g, nr, nc, dr, dc);
+
+              // Grow at the cell just beyond the chain
+              const grow_r = far_r + dr, grow_c = far_c + dc;
+              if (grow_r < 0 || grow_r >= sz || grow_c < 0 || grow_c >= sz) {
+                // Chain reaches the grid boundary — hard invalidation:
+                // the forward ray would have hit the boundary, not a 0,
+                // so this reverse move is not valid.
+                hardInvalid = true;
+                break;
+              }
+              growSet.add(grow_r * sz + grow_c);
+            }
           }
 
-          madeProgress = true;
-          break; // one centre per iteration
+          if (hardInvalid) continue;
+
+          // Convert Set keys back to [r, c] pairs, keeping only cells
+          // that are currently 0 (actual new growth).
+          const newOnes = [];
+          for (const key of growSet) {
+            const gr = Math.floor(key / sz), gc = key % sz;
+            if (g[gr][gc] === 0) newOnes.push([gr, gc]);
+          }
+
+          // Don't overshoot the target zero count
+          if (zeroCount - newOnes.length < targetZeros) continue;
+          if (newOnes.length === 0) continue;
+
+          // Apply all growths for this step
+          for (const [gr, gc] of newOnes) {
+            g[gr][gc] = 1;
+            zeroCount--;
+          }
+
+          // Record this growth step for later verification
+          growthSteps.push({ center: [cr, cc], newOnes: [...newOnes] });
+
+          grownThisStep = true;
+          break; // one growth step per iteration, then re-evaluate
         }
 
-        if (!madeProgress) { stalled = true; break; }
+        if (!grownThisStep) { stalled = true; break; }
       }
 
       if (stalled) continue; // couldn't grow enough, retry
@@ -668,10 +680,9 @@ body {
       // --- Validate ---
       const finalOnes = countOnes(g);
       if (finalOnes !== targetOnes) continue;
-      if (!isConnected(g)) continue;
 
-      // Quick BFS sanity check (generation is constructive so this almost never fails)
-      if (isSolvable(g, sz).solvable) return g;
+      // Verify by reversing the growth steps (forward moves)
+      if (verifyByReversal(g, growthSteps)) return g;
     }
 
     // Fallback
@@ -686,71 +697,54 @@ body {
     }
   }
 
-  /** Grid to string key for visited set */
-  function gridKey(g) {
-    return g.map(row => row.join('')).join('|');
-  }
-
   /**
-   * BFS solver: can we reach any single-1 state from g?
-   * Limits depth and state count.
+   * Verify that the generated board is solvable by applying forward moves
+   * in the reverse order of the recorded growth steps.
+   *
+   * Each growth step recorded { center, newOnes } where newOnes are the
+   * cells that were converted from 0→1.  A forward move from the same
+   * center on the board *after* that step would set those exact cells to 0.
+   * So applying the steps in reverse (forward moves on the final board)
+   * should reduce it all the way back to a single 1-cell.
    */
-  function isSolvable(g, sz) {
-    const startKey = gridKey(g);
-    const startOnes = countOnes(g);
-    if (startOnes === 1) return { solvable: true, path: [] };
-    // Need at least ceil((startOnes-1)/4) forward moves — if that exceeds
-    // max depth we can bail out early.
-    const minMovesNeeded = Math.ceil((startOnes - 1) / 4);
-    const maxDepth = SOLVER_MAX_DEPTH[sz] || 8;
-    if (minMovesNeeded > maxDepth) return { solvable: false, path: [] };
-
-    const maxStates = SOLVER_MAX_STATES[sz] || 30000;
-    const queue = [{ g: cloneGrid(g), depth: 0, path: [] }];
-    const visited = new Set([startKey]);
-    let head = 0;
-
-    while (head < queue.length) {
-      if (visited.size > maxStates) break;
-
-      const { g: cur, depth, path } = queue[head++];
-      if (depth >= maxDepth) continue;
-
-      // Try all possible moves
-      for (let r = 0; r < sz; r++) {
-        for (let c = 0; c < sz; c++) {
-          if (cur[r][c] !== 1) continue;
-
-          const next = cloneGrid(cur);
-          const result = applyMove(next, r, c);
-          if (!result || result.changed.length === 0) continue;
-
-          const onesAfter = countOnes(next);
-          if (onesAfter === 1) {
-            return { solvable: true, path: [...path, [r, c]] };
-          }
-
-          const key = gridKey(next);
-          if (!visited.has(key)) {
-            visited.add(key);
-            queue.push({ g: next, depth: depth + 1, path: [...path, [r, c]] });
-          }
+  function verifyByReversal(g, steps) {
+    const test = cloneGrid(g);
+    // Apply forward moves in reverse order of generation
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const { center, newOnes } = steps[i];
+      const [cr, cc] = center;
+      const endpoints = getRayEndpoints(test, cr, cc);
+      const changed = [];
+      for (const [er, ec] of endpoints) {
+        if (test[er][ec] === 1 && (er !== cr || ec !== c)) {
+          test[er][ec] = 0;
+          changed.push([er, ec]);
         }
       }
+      // The forward move must have changed exactly the same cells
+      // that were grown in the reverse step
+      if (changed.length !== newOnes.length) return false;
+      const cmp = (a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1];
+      const sortedChanged = [...changed].sort(cmp);
+      const sortedNew = [...newOnes].sort(cmp);
+      for (let j = 0; j < sortedChanged.length; j++) {
+        if (sortedChanged[j][0] !== sortedNew[j][0] ||
+            sortedChanged[j][1] !== sortedNew[j][1]) return false;
+      }
     }
-
-    return { solvable: false, path: [] };
+    return countOnes(test) === 1;
   }
 
   /**
-   * Fallback: all-1s board with exactly sz zeros placed in the first row
-   * (wrapping to next rows if sz > sz).  This pattern is solvable because
-   * cells below the zero-row can reach edge/boundary endpoints.
+   * Fallback board — similar reverse-growth logic but with simpler, more
+   * aggressive expansion.  Guaranteed solvable by construction.
    */
   function createFallbackBoard(sz) {
+    // Simple pattern: all 1s except sz zeros placed in the top-left corner.
+    // This is trivially solvable — cells to the right/below can shoot rays
+    // toward those zeros, reducing the board step by step.
     const g = Array.from({ length: sz }, () => new Array(sz).fill(1));
 
-    // Place exactly sz zeros scanning left→right, top→bottom
     let placed = 0;
     for (let r = 0; r < sz && placed < sz; r++) {
       for (let c = 0; c < sz && placed < sz; c++) {
@@ -759,29 +753,7 @@ body {
       }
     }
 
-    // Quick solvability check; if it fails (unlikely), fall back to cross
-    if (isSolvable(g, sz).solvable) return g;
-
-    // Ultimate fallback — cross pattern, then add/remove to get exact zeros
-    const g2 = Array.from({ length: sz }, () => new Array(sz).fill(0));
-    const mid = Math.floor(sz / 2);
-    for (let i = 0; i < sz; i++) { g2[mid][i] = 1; g2[i][mid] = 1; }
-    // Cross has 2*sz-1 ones → sz²-(2*sz-1) zeros
-    // Add extra ones at corners to reduce zeros toward target
-    if (sz >= 4 && mid > 0 && mid < sz - 1) {
-      g2[mid - 1][mid - 1] = 1; g2[mid + 1][mid + 1] = 1;
-      g2[mid - 1][mid + 1] = 1; g2[mid + 1][mid - 1] = 1;
-    }
-    // If still too many zeros, fill more cells with 1
-    let curZeros = sz * sz - countOnes(g2);
-    if (curZeros > sz) {
-      const need = curZeros - sz;
-      let done = 0;
-      for (let r = 0; r < sz && done < need; r++)
-        for (let c = 0; c < sz && done < need; c++)
-          if (g2[r][c] === 0) { g2[r][c] = 1; done++; }
-    }
-    return g2;
+    return g;
   }
 
   // ============ Rendering ============
@@ -789,10 +761,10 @@ body {
   /** Compute a cell size so the board fits within the viewport. */
   function applyCellSize() {
     const boardPadding = parseFloat(getComputedStyle(boardEl.parentElement).paddingLeft) * 2 || 20;
-    const gap = n <= 5 ? 4 : (n <= 6 ? 3 : 2);
+    const gap = n <= 5 ? 4 : (n <= 7 ? 3 : (n <= 12 ? 2 : 1));
     // Available width: viewport minus container padding, board wrapper padding, and some margin
     const vw = window.innerWidth;
-    const maxBoardWidth = Math.min(vw - 32, 560);
+    const maxBoardWidth = Math.min(vw - 32, 700);
     const cellSize = Math.floor((maxBoardWidth - boardPadding - (n - 1) * gap) / n);
     // Clamp between reasonable bounds
     const clamped = Math.max(32, Math.min(cellSize, 80));
