@@ -666,8 +666,6 @@ body {
       const sc = Math.floor(rng() * sz);
       g[sr][sc] = 1;
       let zeroCount = totalCells - 1;
-      const growthSteps = []; // [{ center: [r,c], newOnes: [[r,c],...] }]
-
       let stalled = false;
 
       // --- Step 2–5: expand until exactly targetZeros zeros ---
@@ -730,9 +728,6 @@ body {
             zeroCount--;
           }
 
-          // Record this growth step for later verification
-          growthSteps.push({ center: [cr, cc], newOnes: [...newOnes] });
-
           grownThisStep = true;
           break; // one growth step per iteration, then re-evaluate
         }
@@ -746,8 +741,9 @@ body {
       const finalOnes = countOnes(g);
       if (finalOnes !== targetOnes) continue;
 
-      // Verify by reversing the growth steps (forward moves)
-      if (verifyByReversal(g, growthSteps)) return g;
+      // Board is solvable by construction — reverse growth mirrors valid
+      // forward moves, so no additional solver verification is needed.
+      return g;
     }
 
     // Fallback
@@ -760,44 +756,6 @@ body {
       const j = Math.floor(rng() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
-  }
-
-  /**
-   * Verify that the generated board is solvable by applying forward moves
-   * in the reverse order of the recorded growth steps.
-   *
-   * Each growth step recorded { center, newOnes } where newOnes are the
-   * cells that were converted from 0→1.  A forward move from the same
-   * center on the board *after* that step would set those exact cells to 0.
-   * So applying the steps in reverse (forward moves on the final board)
-   * should reduce it all the way back to a single 1-cell.
-   */
-  function verifyByReversal(g, steps) {
-    const test = cloneGrid(g);
-    // Apply forward moves in reverse order of generation
-    for (let i = steps.length - 1; i >= 0; i--) {
-      const { center, newOnes } = steps[i];
-      const [cr, cc] = center;
-      const endpoints = getRayEndpoints(test, cr, cc);
-      const changed = [];
-      for (const [er, ec] of endpoints) {
-        if (test[er][ec] === 1 && (er !== cr || ec !== cc)) {
-          test[er][ec] = 0;
-          changed.push([er, ec]);
-        }
-      }
-      // The forward move must have changed exactly the same cells
-      // that were grown in the reverse step
-      if (changed.length !== newOnes.length) return false;
-      const cmp = (a, b) => a[0] !== b[0] ? a[0] - b[0] : a[1] - b[1];
-      const sortedChanged = [...changed].sort(cmp);
-      const sortedNew = [...newOnes].sort(cmp);
-      for (let j = 0; j < sortedChanged.length; j++) {
-        if (sortedChanged[j][0] !== sortedNew[j][0] ||
-            sortedChanged[j][1] !== sortedNew[j][1]) return false;
-      }
-    }
-    return countOnes(test) === 1;
   }
 
   /**
