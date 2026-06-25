@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>棋盘射线游戏</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #eef0f4;
+  --panel: #ffffff;
+  --cell-zero: #dcdfe5;
+  --cell-one: #002fa7;
+  --cell-one-glow: rgba(0, 47, 167, 0.28);
+  --cell-hover: rgba(0, 47, 167, 0.14);
+  --center: #f59e0b;
+  --center-glow: rgba(245, 158, 11, 0.45);
+  --endpoint: #ef4444;
+  --endpoint-glow: rgba(239, 68, 68, 0.50);
+  --ray: rgba(245, 158, 11, 0.32);
+  --text: #4a4d55;
+  --text-dim: #8b8f98;
+  --text-bright: #1a1d24;
+  --border: #d8dae0;
+  --accent: #002fa7;
+  /* cell-size and gap are set dynamically via JS */
+  --cell-size: 60px;
+  --gap: 4px;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image:
+    radial-gradient(ellipse at 50% 0%, rgba(0, 47, 167, 0.05) 0%, transparent 60%),
+    radial-gradient(ellipse at 80% 100%, rgba(0, 47, 167, 0.04) 0%, transparent 60%);
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 20px;
+}
+
+/* Header */
+.header {
+  text-align: center;
+}
+.header h1 {
+  font-size: clamp(1.4rem, 4vw, 2rem);
+  font-weight: 700;
+  color: var(--text-bright);
+  letter-spacing: 0.04em;
+  background: linear-gradient(135deg, #002fa7, #4a7bff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+.header .subtitle {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+  margin-top: 2px;
+}
+
+/* Info bar */
+.info-bar {
+  display: flex;
+  gap: 28px;
+  align-items: center;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 24px;
+}
+.info-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.info-label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+}
+.info-value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--text-bright);
+  font-variant-numeric: tabular-nums;
+}
+.info-value.ones { color: var(--cell-one); }
+.info-value.moves { color: var(--accent); }
+
+/* Board */
+.board-wrapper {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: clamp(10px, 2vmin, 20px);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+}
+
+.board {
+  display: grid;
+  gap: var(--gap);
+}
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: 8px;
+  cursor: pointer;
+  position: relative;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.cell[data-value="1"] {
+  background: var(--cell-one);
+  box-shadow: 0 0 12px var(--cell-one-glow), inset 0 0 8px rgba(255,255,255,0.25);
+}
+.cell[data-value="1"]:hover {
+  box-shadow: 0 0 22px var(--cell-one-glow), 0 0 40px rgba(0, 47, 167, 0.14);
+  transform: scale(1.06);
+  z-index: 1;
+}
+.cell[data-value="1"]:active {
+  transform: scale(0.94);
+}
+
+.cell[data-value="0"] {
+  background: var(--cell-zero);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.04);
+  cursor: default;
+}
+.cell[data-value="0"]:hover {
+  background: #cfd2d9;
+}
+
+/* Animation states */
+.cell.center {
+  background: var(--center) !important;
+  box-shadow: 0 0 28px var(--center-glow), 0 0 50px rgba(245, 158, 11, 0.30) !important;
+  transform: scale(1.12);
+  z-index: 2;
+  animation: pulse 0.4s ease-out;
+}
+
+.cell.ray-path {
+  background: var(--ray) !important;
+  box-shadow: 0 0 6px rgba(245, 158, 11, 0.20) !important;
+}
+
+.cell.endpoint-hit {
+  background: var(--endpoint) !important;
+  box-shadow: 0 0 24px var(--endpoint-glow), 0 0 48px rgba(239, 68, 68, 0.30) !important;
+  animation: endpointFlash 0.5s ease-out;
+}
+
+.cell.fade-to-zero {
+  transition: background-color 0.5s ease, box-shadow 0.5s ease !important;
+  background: var(--cell-zero) !important;
+  box-shadow: inset 0 1px 0 rgba(0,0,0,0.04) !important;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1.0); }
+  50% { transform: scale(1.18); }
+  100% { transform: scale(1.12); }
+}
+
+@keyframes endpointFlash {
+  0% { transform: scale(1.0); background: #fff; }
+  30% { transform: scale(1.2); background: var(--endpoint); }
+  60% { transform: scale(1.05); background: var(--endpoint); }
+  100% { transform: scale(1.0); background: var(--endpoint); }
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  background: var(--panel);
+  color: var(--text);
+  border: 1px solid var(--border);
+  padding: 10px 20px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn:hover {
+  background: #eef0f6;
+  border-color: #c5c8d2;
+}
+.btn:active {
+  transform: scale(0.96);
+}
+.btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+.btn.primary:hover {
+  background: #003dd4;
+}
+
+.size-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 12px;
+}
+.size-selector label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.size-selector select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  font-family: inherit;
+  cursor: pointer;
+  outline: none;
+}
+.size-selector select:focus {
+  outline: none;
+  border-color: #002fa7;
+}
+
+/* Win overlay */
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  animation: fadeIn 0.3s ease;
+  backdrop-filter: blur(4px);
+}
+.overlay.hidden { display: none; }
+
+.win-dialog {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 36px 44px;
+  text-align: center;
+  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.12);
+  animation: slideUp 0.4s ease;
+  max-width: 360px;
+  width: 90%;
+}
+.win-dialog .icon { font-size: 3rem; margin-bottom: 10px; }
+.win-dialog h2 {
+  font-size: 1.6rem;
+  color: var(--cell-one);
+  margin-bottom: 6px;
+}
+.win-dialog .stats {
+  color: var(--text-dim);
+  font-size: 0.95rem;
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.win-dialog .stats span {
+  color: var(--text-bright);
+  font-weight: 600;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(30px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Cell with no valid endpoints */
+.cell.no-moves {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Toast */
+.toast {
+  position: fixed;
+  bottom: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: var(--panel);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 22px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  z-index: 200;
+  animation: toastIn 0.3s ease, toastOut 0.3s ease 1.5s forwards;
+}
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes toastOut {
+  from { opacity: 1; }
+  to { opacity: 0; }
+}
+
+/* Responsive */
+@media (max-width: 500px) {
+  .info-bar { gap: 16px; padding: 8px 16px; }
+  .btn { padding: 8px 14px; font-size: 0.8rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h1>棋盘射线游戏</h1>
+    <div class="subtitle">消到只剩一格即为胜利</div>
+  </div>
+
+  <div class="info-bar">
+    <div class="info-item">
+      <span class="info-label">剩余 🎯</span>
+      <span class="info-value ones" id="ones-count">0</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">步数</span>
+      <span class="info-value moves" id="moves-count">0</span>
+    </div>
+    <div class="info-item">
+      <span class="info-label">棋盘</span>
+      <span class="info-value" id="size-display">5×5</span>
+    </div>
+  </div>
+
+  <div class="board-wrapper">
+    <div class="board" id="board"></div>
+  </div>
+
+  <div class="controls">
+    <button class="btn primary" id="btn-new" title="生成新棋盘">🔄 新游戏</button>
+    <button class="btn" id="btn-undo" title="撤销上一步 (Ctrl+Z)">↩ 撤销</button>
+    <div class="size-selector">
+      <label for="board-size">大小</label>
+      <select id="board-size">
+        <option value="3">3×3</option>
+        <option value="4">4×4</option>
+        <option value="5" selected>5×5</option>
+        <option value="6">6×6</option>
+        <option value="7">7×7</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="overlay hidden" id="win-overlay">
+  <div class="win-dialog">
+    <div class="icon">🎉</div>
+    <h2>恭喜通关！</h2>
+    <div class="stats">
+      你用 <span id="win-moves">0</span> 步将棋盘消至一格<br>
+      棋盘大小：<span id="win-size">5×5</span>
+    </div>
+    <button class="btn primary" id="btn-play-again">🔄 再来一局</button>
+  </div>
+</div>
+
+<script>
+(function() {
+  // ============ Constants ============
+  const SOLVER_MAX_DEPTH = { 3: 10, 4: 10, 5: 8, 6: 6, 7: 5 };
+  const SOLVER_MAX_STATES = { 3: 3000, 4: 8000, 5: 15000, 6: 30000, 7: 50000 };
+  const ANIM_SPEED = 45; // ms per ray cell
+
+  // ============ DOM refs ============
+  const boardEl = document.getElementById('board');
+  const onesCountEl = document.getElementById('ones-count');
+  const movesCountEl = document.getElementById('moves-count');
+  const sizeDisplayEl = document.getElementById('size-display');
+  const winOverlay = document.getElementById('win-overlay');
+  const winMovesEl = document.getElementById('win-moves');
+  const winSizeEl = document.getElementById('win-size');
+  const boardSizeSelect = document.getElementById('board-size');
+
+  // ============ State ============
+  let n = 5;
+  let grid = [];
+  let initialGrid = []; // for undo all the way back
+  let moveHistory = [];
+  let animating = false;
+  let gameOver = false;
+
+  // ============ Core logic ============
+
+  /** Deep clone a 2D grid */
+  function cloneGrid(g) {
+    return g.map(row => [...row]);
+  }
+
+  /** Count number of 1s */
+  function countOnes(g) {
+    let c = 0;
+    for (let r = 0; r < g.length; r++)
+      for (let c2 = 0; c2 < g[r].length; c2++)
+        if (g[r][c2] === 1) c++;
+    return c;
+  }
+
+  /**
+   * 4-connectivity check: are all 1s in g connected via up/down/left/right?
+   */
+  function isConnected(g) {
+    const sz = g.length;
+    // Find first 1 as BFS seed
+    let sr = -1, sc = -1;
+    for (let r = 0; r < sz; r++) {
+      for (let c = 0; c < sz; c++) {
+        if (g[r][c] === 1) { sr = r; sc = c; break; }
+      }
+      if (sr >= 0) break;
+    }
+    if (sr < 0) return true; // no 1s — vacuously connected
+
+    const visited = Array.from({ length: sz }, () => new Array(sz).fill(false));
+    const queue = [[sr, sc]];
+    visited[sr][sc] = true;
+    let connected = 0;
+    const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
+
+    while (queue.length > 0) {
+      const [cr, cc] = queue.shift();
+      connected++;
+      for (const [dr, dc] of dirs) {
+        const nr = cr + dr, nc = cc + dc;
+        if (nr >= 0 && nr < sz && nc >= 0 && nc < sz &&
+            !visited[nr][nc] && g[nr][nc] === 1) {
+          visited[nr][nc] = true;
+          queue.push([nr, nc]);
+        }
+      }
+    }
+
+    // Compare BFS count with total 1s
+    let total = 0;
+    for (let r = 0; r < sz; r++)
+      for (let c = 0; c < sz; c++)
+        if (g[r][c] === 1) total++;
+
+    return connected === total;
+  }
+
+  /** Get all positions where the value is 1 */
+  function getAllOnes(g) {
+    const ones = [];
+    for (let i = 0; i < g.length; i++)
+      for (let j = 0; j < g[i].length; j++)
+        if (g[i][j] === 1) ones.push([i, j]);
+    return ones;
+  }
+
+  /**
+   * Find the first 0 in each of 4 directions from (r, c).
+   * Returns up to 4 positions (only those that are actually 0).
+   */
+  function getFirstZeros(g, r, c) {
+    const sz = g.length;
+    const result = [];
+
+    // Up (decreasing row)
+    for (let k = r - 1; k >= 0; k--) {
+      if (g[k][c] === 0) { result.push([k, c]); break; }
+    }
+    // Down (increasing row)
+    for (let k = r + 1; k < sz; k++) {
+      if (g[k][c] === 0) { result.push([k, c]); break; }
+    }
+    // Left (decreasing col)
+    for (let k = c - 1; k >= 0; k--) {
+      if (g[r][k] === 0) { result.push([r, k]); break; }
+    }
+    // Right (increasing col)
+    for (let k = c + 1; k < sz; k++) {
+      if (g[r][k] === 0) { result.push([r, k]); break; }
+    }
+
+    return result;
+  }
+
+  /**
+   * Compute the 4 ray endpoints for a center at (r, c).
+   * Returns array of [r, c] pairs (may include center if no reachable cell).
+   */
+  function getRayEndpoints(g, r, c) {
+    const sz = g.length;
+    const endpoints = [];
+
+    // Direction 1: upward (decreasing row)
+    {
+      let firstZero = -1; // boundary marker
+      for (let k = r - 1; k >= 0; k--) {
+        if (g[k][c] === 0) { firstZero = k; break; }
+      }
+      endpoints.push([firstZero + 1, c]);
+    }
+
+    // Direction 2: downward (increasing row)
+    {
+      let firstZero = sz; // boundary marker
+      for (let k = r + 1; k < sz; k++) {
+        if (g[k][c] === 0) { firstZero = k; break; }
+      }
+      endpoints.push([firstZero - 1, c]);
+    }
+
+    // Direction 3: leftward (decreasing col)
+    {
+      let firstZero = -1;
+      for (let k = c - 1; k >= 0; k--) {
+        if (g[r][k] === 0) { firstZero = k; break; }
+      }
+      endpoints.push([r, firstZero + 1]);
+    }
+
+    // Direction 4: rightward (increasing col)
+    {
+      let firstZero = sz;
+      for (let k = c + 1; k < sz; k++) {
+        if (g[r][k] === 0) { firstZero = k; break; }
+      }
+      endpoints.push([r, firstZero - 1]);
+    }
+
+    return endpoints;
+  }
+
+  /**
+   * Apply a move to grid (mutates), returning the endpoints that were set to 0.
+   * Returns null if move is invalid (center is not 1).
+   */
+  function applyMove(g, r, c) {
+    if (g[r][c] !== 1) return null;
+    const endpoints = getRayEndpoints(g, r, c);
+    const changed = [];
+    for (const [er, ec] of endpoints) {
+      if (g[er][ec] === 1 && (er !== r || ec !== c)) {
+        g[er][ec] = 0;
+        changed.push([er, ec]);
+      }
+    }
+    return { center: [r, c], changed };
+  }
+
+  /** Undo last move */
+  function undoMove() {
+    if (animating) return;
+    if (gameOver) {
+      // Allow undo after winning — dismiss win dialog and continue
+      hideWin();
+      gameOver = false;
+    }
+    if (moveHistory.length === 0) {
+      showToast('没有可以撤销的步骤');
+      return;
+    }
+    const last = moveHistory.pop();
+    for (const [r, c] of last.changed) {
+      grid[r][c] = 1;
+    }
+    render();
+    updateInfo();
+  }
+
+  // ============ Board generation ============
+
+  /**
+   * Generate a solvable board with exactly sz zeros.
+   *
+   * Algorithm (reverse expansion):
+   *   1. Seed a random cell with 1.
+   *   2. Randomly pick an existing 1-cell as centre.
+   *   3. Randomly pick 1~4 directions; for each, find the first 0 and set it to 1.
+   *   4. Repeat 2-3 until exactly sz zeros remain.
+   *
+   * Because we only ever *add* ones by flipping the first 0 in a direction,
+   * the forward moves taken in reverse order will undo the expansion and
+   * reduce the board back to a single 1 — the board is solvable by construction.
+   */
+  function generateBoard(sz) {
+    const totalCells = sz * sz;
+    const targetZeros = sz;
+    const targetOnes = totalCells - targetZeros;
+    const maxAttempts = 30;
+
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // --- Seed ---
+      const g = Array.from({ length: sz }, () => new Array(sz).fill(0));
+      const sr = Math.floor(Math.random() * sz);
+      const sc = Math.floor(Math.random() * sz);
+      g[sr][sc] = 1;
+
+      let stalled = false;
+
+      // --- Expand until we hit targetOnes ---
+      while (countOnes(g) < targetOnes) {
+        const remaining = targetOnes - countOnes(g);
+        const allOnes = getAllOnes(g);
+        shuffle(allOnes);
+
+        let madeProgress = false;
+        for (const [cr, cc] of allOnes) {
+          // Candidates: first 0 in each direction from this centre
+          const candidates = getFirstZeros(g, cr, cc);
+          if (candidates.length === 0) continue;
+
+          // Pick 1 ~ min(4, remaining, candidates.length) directions at random
+          const maxPick = Math.min(4, remaining, candidates.length);
+          const numDirs = Math.floor(Math.random() * maxPick) + 1;
+
+          shuffle(candidates);
+          for (let i = 0; i < numDirs; i++) {
+            g[candidates[i][0]][candidates[i][1]] = 1;
+          }
+
+          madeProgress = true;
+          break; // one centre per iteration
+        }
+
+        if (!madeProgress) { stalled = true; break; }
+      }
+
+      if (stalled) continue; // couldn't grow enough, retry
+
+      // --- Validate ---
+      const finalOnes = countOnes(g);
+      if (finalOnes !== targetOnes) continue;
+      if (!isConnected(g)) continue;
+
+      // Quick BFS sanity check (generation is constructive so this almost never fails)
+      if (isSolvable(g, sz).solvable) return g;
+    }
+
+    // Fallback
+    return createFallbackBoard(sz);
+  }
+
+  /** Shuffle array in place */
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  /** Grid to string key for visited set */
+  function gridKey(g) {
+    return g.map(row => row.join('')).join('|');
+  }
+
+  /**
+   * BFS solver: can we reach any single-1 state from g?
+   * Limits depth and state count.
+   */
+  function isSolvable(g, sz) {
+    const startKey = gridKey(g);
+    const startOnes = countOnes(g);
+    if (startOnes === 1) return { solvable: true, path: [] };
+    // Need at least ceil((startOnes-1)/4) forward moves — if that exceeds
+    // max depth we can bail out early.
+    const minMovesNeeded = Math.ceil((startOnes - 1) / 4);
+    const maxDepth = SOLVER_MAX_DEPTH[sz] || 8;
+    if (minMovesNeeded > maxDepth) return { solvable: false, path: [] };
+
+    const maxStates = SOLVER_MAX_STATES[sz] || 30000;
+    const queue = [{ g: cloneGrid(g), depth: 0, path: [] }];
+    const visited = new Set([startKey]);
+    let head = 0;
+
+    while (head < queue.length) {
+      if (visited.size > maxStates) break;
+
+      const { g: cur, depth, path } = queue[head++];
+      if (depth >= maxDepth) continue;
+
+      // Try all possible moves
+      for (let r = 0; r < sz; r++) {
+        for (let c = 0; c < sz; c++) {
+          if (cur[r][c] !== 1) continue;
+
+          const next = cloneGrid(cur);
+          const result = applyMove(next, r, c);
+          if (!result || result.changed.length === 0) continue;
+
+          const onesAfter = countOnes(next);
+          if (onesAfter === 1) {
+            return { solvable: true, path: [...path, [r, c]] };
+          }
+
+          const key = gridKey(next);
+          if (!visited.has(key)) {
+            visited.add(key);
+            queue.push({ g: next, depth: depth + 1, path: [...path, [r, c]] });
+          }
+        }
+      }
+    }
+
+    return { solvable: false, path: [] };
+  }
+
+  /**
+   * Fallback: all-1s board with exactly sz zeros placed in the first row
+   * (wrapping to next rows if sz > sz).  This pattern is solvable because
+   * cells below the zero-row can reach edge/boundary endpoints.
+   */
+  function createFallbackBoard(sz) {
+    const g = Array.from({ length: sz }, () => new Array(sz).fill(1));
+
+    // Place exactly sz zeros scanning left→right, top→bottom
+    let placed = 0;
+    for (let r = 0; r < sz && placed < sz; r++) {
+      for (let c = 0; c < sz && placed < sz; c++) {
+        g[r][c] = 0;
+        placed++;
+      }
+    }
+
+    // Quick solvability check; if it fails (unlikely), fall back to cross
+    if (isSolvable(g, sz).solvable) return g;
+
+    // Ultimate fallback — cross pattern, then add/remove to get exact zeros
+    const g2 = Array.from({ length: sz }, () => new Array(sz).fill(0));
+    const mid = Math.floor(sz / 2);
+    for (let i = 0; i < sz; i++) { g2[mid][i] = 1; g2[i][mid] = 1; }
+    // Cross has 2*sz-1 ones → sz²-(2*sz-1) zeros
+    // Add extra ones at corners to reduce zeros toward target
+    if (sz >= 4 && mid > 0 && mid < sz - 1) {
+      g2[mid - 1][mid - 1] = 1; g2[mid + 1][mid + 1] = 1;
+      g2[mid - 1][mid + 1] = 1; g2[mid + 1][mid - 1] = 1;
+    }
+    // If still too many zeros, fill more cells with 1
+    let curZeros = sz * sz - countOnes(g2);
+    if (curZeros > sz) {
+      const need = curZeros - sz;
+      let done = 0;
+      for (let r = 0; r < sz && done < need; r++)
+        for (let c = 0; c < sz && done < need; c++)
+          if (g2[r][c] === 0) { g2[r][c] = 1; done++; }
+    }
+    return g2;
+  }
+
+  // ============ Rendering ============
+
+  /** Compute a cell size so the board fits within the viewport. */
+  function applyCellSize() {
+    const boardPadding = parseFloat(getComputedStyle(boardEl.parentElement).paddingLeft) * 2 || 20;
+    const gap = n <= 5 ? 4 : (n <= 6 ? 3 : 2);
+    // Available width: viewport minus container padding, board wrapper padding, and some margin
+    const vw = window.innerWidth;
+    const maxBoardWidth = Math.min(vw - 32, 560);
+    const cellSize = Math.floor((maxBoardWidth - boardPadding - (n - 1) * gap) / n);
+    // Clamp between reasonable bounds
+    const clamped = Math.max(32, Math.min(cellSize, 80));
+    document.documentElement.style.setProperty('--cell-size', clamped + 'px');
+    document.documentElement.style.setProperty('--gap', gap + 'px');
+  }
+
+  function render() {
+    applyCellSize();
+
+    // Single pass: mark cells with no valid endpoints (cheap check)
+    const noEffect = new Set();
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (grid[r][c] !== 1) continue;
+        const eps = getRayEndpoints(grid, r, c);
+        const hasEffect = eps.some(([er, ec]) => grid[er][ec] === 1 && (er !== r || ec !== c));
+        if (!hasEffect) noEffect.add(r * n + c);
+      }
+    }
+
+    // Build HTML string — single innerHTML, no per-cell listeners
+    let html = '';
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        const key = r * n + c;
+        let cls = 'cell';
+        if (noEffect.has(key)) cls += ' no-moves';
+        html += `<div class="${cls}" data-value="${grid[r][c]}" data-row="${r}" data-col="${c}"></div>`;
+      }
+    }
+
+    boardEl.style.gridTemplateColumns = `repeat(${n}, var(--cell-size))`;
+    boardEl.innerHTML = html;
+  }
+
+  function updateInfo() {
+    const ones = countOnes(grid);
+    onesCountEl.textContent = ones;
+    movesCountEl.textContent = moveHistory.length;
+  }
+
+  // ============ Animation ============
+
+  function getCellEl(r, c) {
+    return boardEl.querySelector(`[data-row="${r}"][data-col="${c}"]`);
+  }
+
+  async function animateMove(r, c, endpoints) {
+    animating = true;
+
+    // Determine which cells will actually change (value 1, not center)
+    const toChange = endpoints.filter(([er, ec]) =>
+      grid[er][ec] === 1 && (er !== r || ec !== c)
+    );
+    if (toChange.length === 0) {
+      animating = false;
+      return;
+    }
+
+    const centerEl = getCellEl(r, c);
+
+    // Phase 1: highlight center
+    centerEl.classList.add('center');
+    await sleep(200);
+
+    // Phase 2: animate rays in 4 directions
+    const rayPromises = [];
+    for (const [er, ec] of endpoints) {
+      if (er === r && ec === c) continue;
+      rayPromises.push(animateRay(r, c, er, ec));
+    }
+    await Promise.all(rayPromises);
+
+    // Phase 3: flash endpoints
+    for (const [er, ec] of toChange) {
+      const el = getCellEl(er, ec);
+      if (el) el.classList.add('endpoint-hit');
+    }
+    await sleep(400);
+
+    // Phase 4: apply changes to grid and history
+    for (const [er, ec] of toChange) {
+      grid[er][ec] = 0;
+    }
+    moveHistory.push({ center: [r, c], changed: toChange });
+    render();
+    updateInfo();
+
+    await sleep(100);
+    animating = false;
+
+    // Check win
+    if (countOnes(grid) === 1) {
+      gameOver = true;
+      await sleep(300);
+      showWin();
+    } else if (countOnes(grid) === 0) {
+      gameOver = true;
+      showToast('棋盘已清空，无法继续');
+    }
+  }
+
+  async function animateRay(r, c, er, ec) {
+    // Determine direction and steps
+    const dr = Math.sign(er - r);
+    const dc = Math.sign(ec - c);
+    const steps = Math.max(Math.abs(er - r), Math.abs(ec - c));
+
+    for (let s = 1; s < steps; s++) {
+      const cr = r + dr * s;
+      const cc = c + dc * s;
+      const el = getCellEl(cr, cc);
+      if (el) {
+        el.classList.add('ray-path');
+      }
+      await sleep(ANIM_SPEED);
+    }
+    // Don't highlight the endpoint here — Phase 3 handles it
+    await sleep(ANIM_SPEED);
+  }
+
+  function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  // ============ Event handlers ============
+
+  function handleCellClick(r, c) {
+    if (animating || gameOver) return;
+    if (grid[r][c] !== 1) return;
+
+    const endpoints = getRayEndpoints(grid, r, c);
+    const hasEffect = endpoints.some(([er, ec]) => grid[er][ec] === 1 && (er !== r || ec !== c));
+    if (!hasEffect) {
+      showToast('该格无可消除的端点');
+      return;
+    }
+
+    animateMove(r, c, endpoints);
+  }
+
+  function showWin() {
+    winMovesEl.textContent = moveHistory.length;
+    winSizeEl.textContent = `${n}×${n}`;
+    winOverlay.classList.remove('hidden');
+  }
+
+  function hideWin() {
+    winOverlay.classList.add('hidden');
+  }
+
+  function newGame() {
+    hideWin();
+    gameOver = false;
+    animating = false;
+    moveHistory = [];
+    grid = generateBoard(n);
+    initialGrid = cloneGrid(grid);
+    render();
+    updateInfo();
+    sizeDisplayEl.textContent = `${n}×${n}`;
+  }
+
+  function showToast(msg) {
+    const existing = document.querySelector('.toast');
+    if (existing) existing.remove();
+    const toast = document.createElement('div');
+    toast.className = 'toast';
+    toast.textContent = msg;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2000);
+  }
+
+  // ============ Button handlers ============
+
+  document.getElementById('btn-new').addEventListener('click', newGame);
+  document.getElementById('btn-undo').addEventListener('click', undoMove);
+  document.getElementById('btn-play-again').addEventListener('click', newGame);
+
+  // Click overlay background to dismiss win dialog
+  winOverlay.addEventListener('click', (e) => {
+    if (e.target === winOverlay) {
+      hideWin();
+      gameOver = false;
+    }
+  });
+
+  boardSizeSelect.addEventListener('change', () => {
+    n = parseInt(boardSizeSelect.value);
+    newGame();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+      e.preventDefault();
+      undoMove();
+    }
+    if (e.key === 'r' && e.ctrlKey) {
+      // Don't interfere with browser reload
+    }
+  });
+
+  // ============ Init ============
+
+  // Event delegation — one listener for the whole board (instead of n² per cell)
+  boardEl.addEventListener('click', (e) => {
+    const cell = e.target.closest('.cell');
+    if (!cell) return;
+    handleCellClick(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
+  });
+
+  n = parseInt(boardSizeSelect.value);
+  newGame();
+
+  // Recalculate cell size on resize / orientation change
+  window.addEventListener('resize', () => {
+    applyCellSize();
+    boardEl.style.gridTemplateColumns = `repeat(${n}, var(--cell-size))`;
+  });
+})();
+</script>
+</body>
+</html>
