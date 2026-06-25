@@ -11,19 +11,28 @@
   --bg: #eef0f4;
   --panel: #ffffff;
   --cell-zero: #dcdfe5;
+  --cell-zero-hover: #cfd2d9;
   --cell-one: #002fa7;
   --cell-one-glow: rgba(0, 47, 167, 0.28);
   --cell-hover: rgba(0, 47, 167, 0.14);
   --center: #f59e0b;
   --center-glow: rgba(245, 158, 11, 0.45);
+  --center-glow-strong: rgba(245, 158, 11, 0.30);
   --endpoint: #ef4444;
   --endpoint-glow: rgba(239, 68, 68, 0.50);
+  --endpoint-glow-strong: rgba(239, 68, 68, 0.30);
   --ray: rgba(245, 158, 11, 0.32);
+  --ray-glow: rgba(245, 158, 11, 0.20);
   --text: #4a4d55;
   --text-dim: #8b8f98;
   --text-bright: #1a1d24;
   --border: #d8dae0;
   --accent: #002fa7;
+  --btn-hover-bg: #eef0f6;
+  --btn-hover-border: #c5c8d2;
+  --btn-primary-hover: #003dd4;
+  --body-gradient-1: radial-gradient(ellipse at 50% 0%, rgba(0, 47, 167, 0.05) 0%, transparent 60%);
+  --body-gradient-2: radial-gradient(ellipse at 80% 100%, rgba(0, 47, 167, 0.04) 0%, transparent 60%);
   /* cell-size and gap are set dynamically via JS */
   --cell-size: 60px;
   --gap: 4px;
@@ -38,9 +47,7 @@ body {
   align-items: center;
   min-height: 100vh;
   overflow-x: hidden;
-  background-image:
-    radial-gradient(ellipse at 50% 0%, rgba(0, 47, 167, 0.05) 0%, transparent 60%),
-    radial-gradient(ellipse at 80% 100%, rgba(0, 47, 167, 0.04) 0%, transparent 60%);
+  background-image: var(--body-gradient-1), var(--body-gradient-2);
 }
 
 .container {
@@ -51,25 +58,6 @@ body {
   padding: 20px;
 }
 
-/* Header */
-.header {
-  text-align: center;
-}
-.header h1 {
-  font-size: clamp(1.4rem, 4vw, 2rem);
-  font-weight: 700;
-  color: var(--text-bright);
-  letter-spacing: 0.04em;
-  background: linear-gradient(135deg, #002fa7, #4a7bff);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.header .subtitle {
-  font-size: 0.8rem;
-  color: var(--text-dim);
-  margin-top: 2px;
-}
 
 /* Info bar */
 .info-bar {
@@ -134,7 +122,7 @@ body {
   box-shadow: 0 0 12px var(--cell-one-glow), inset 0 0 8px rgba(255,255,255,0.25);
 }
 .cell[data-value="1"]:hover {
-  box-shadow: 0 0 22px var(--cell-one-glow), 0 0 40px rgba(0, 47, 167, 0.14);
+  box-shadow: 0 0 22px var(--cell-one-glow), 0 0 40px var(--cell-hover);
   transform: scale(1.06);
   z-index: 1;
 }
@@ -148,13 +136,13 @@ body {
   cursor: default;
 }
 .cell[data-value="0"]:hover {
-  background: #cfd2d9;
+  background: var(--cell-zero-hover);
 }
 
 /* Animation states */
 .cell.center {
   background: var(--center) !important;
-  box-shadow: 0 0 28px var(--center-glow), 0 0 50px rgba(245, 158, 11, 0.30) !important;
+  box-shadow: 0 0 28px var(--center-glow), 0 0 50px var(--center-glow-strong) !important;
   transform: scale(1.12);
   z-index: 2;
   animation: pulse 0.4s ease-out;
@@ -162,12 +150,12 @@ body {
 
 .cell.ray-path {
   background: var(--ray) !important;
-  box-shadow: 0 0 6px rgba(245, 158, 11, 0.20) !important;
+  box-shadow: 0 0 6px var(--ray-glow) !important;
 }
 
 .cell.endpoint-hit {
   background: var(--endpoint) !important;
-  box-shadow: 0 0 24px var(--endpoint-glow), 0 0 48px rgba(239, 68, 68, 0.30) !important;
+  box-shadow: 0 0 24px var(--endpoint-glow), 0 0 48px var(--endpoint-glow-strong) !important;
   animation: endpointFlash 0.5s ease-out;
 }
 
@@ -214,8 +202,8 @@ body {
   gap: 6px;
 }
 .btn:hover {
-  background: #eef0f6;
-  border-color: #c5c8d2;
+  background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
 }
 .btn:active {
   transform: scale(0.96);
@@ -226,10 +214,10 @@ body {
   color: #fff;
 }
 .btn.primary:hover {
-  background: #003dd4;
+  background: var(--btn-primary-hover);
 }
 
-.size-selector {
+.size-selector, .theme-selector {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -238,11 +226,11 @@ body {
   border-radius: 10px;
   padding: 6px 12px;
 }
-.size-selector label {
+.size-selector label, .theme-selector label {
   font-size: 0.8rem;
   color: var(--text-dim);
 }
-.size-selector select {
+.size-selector select, .theme-selector select {
   background: var(--bg);
   color: var(--text);
   border: 1px solid var(--border);
@@ -253,9 +241,9 @@ body {
   cursor: pointer;
   outline: none;
 }
-.size-selector select:focus {
+.size-selector select:focus, .theme-selector select:focus {
   outline: none;
-  border-color: #002fa7;
+  border-color: var(--accent);
 }
 
 .seed-input-group {
@@ -285,7 +273,7 @@ body {
   letter-spacing: 0.08em;
 }
 .seed-input-group input:focus {
-  border-color: #002fa7;
+  border-color: var(--accent);
 }
 .seed-input-group .btn {
   padding: 6px 10px;
@@ -349,6 +337,23 @@ body {
   cursor: not-allowed;
 }
 
+/* Cell that would disconnect the graph */
+.cell.disconnecting {
+  cursor: not-allowed;
+}
+.cell.disconnecting::after {
+  content: '✕';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-size) * 0.65);
+  color: var(--endpoint);
+  font-weight: 900;
+  pointer-events: none;
+}
+
 /* Toast */
 .toast {
   position: fixed;
@@ -383,10 +388,6 @@ body {
 <body>
 
 <div class="container">
-  <div class="header">
-    <h1>棋盘射线游戏</h1>
-    <div class="subtitle">消到只剩一格即为胜利</div>
-  </div>
 
   <div class="info-bar">
     <div class="info-item">
@@ -418,6 +419,16 @@ body {
       <label for="seed-input">种子</label>
       <input type="text" id="seed-input" placeholder="留空随机" maxlength="6" pattern="\d*" inputmode="numeric" autocomplete="off">
       <button class="btn" id="btn-random-seed" title="随机种子">🎲</button>
+    </div>
+    <div class="theme-selector">
+      <label for="theme-select">配色</label>
+      <select id="theme-select">
+        <option value="blue">蓝</option>
+        <option value="green">绿</option>
+        <option value="purple">紫</option>
+        <option value="dark">暗</option>
+        <option value="warm">暖</option>
+      </select>
     </div>
     <div class="size-selector">
       <label for="board-size">大小</label>
@@ -500,6 +511,7 @@ body {
   let moveHistory = [];
   let animating = false;
   let gameOver = false;
+  let disconnectingCells = new Set();
 
   // ============ Core logic ============
 
@@ -524,6 +536,58 @@ body {
       for (let j = 0; j < g[i].length; j++)
         if (g[i][j] === 1) ones.push([i, j]);
     return ones;
+  }
+
+  /** Check if a set of cells forms a single connected component (4-directional) */
+  function isConnected(cells, sz) {
+    if (cells.length <= 1) return true;
+    const cellSet = new Set(cells.map(([r, c]) => r * sz + c));
+    const visited = new Set();
+    const stack = [cells[0]];
+    visited.add(cells[0][0] * sz + cells[0][1]);
+    while (stack.length > 0) {
+      const [r, c] = stack.pop();
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const nr = r + dr, nc = c + dc;
+        if (nr < 0 || nr >= sz || nc < 0 || nc >= sz) continue;
+        const key = nr * sz + nc;
+        if (cellSet.has(key) && !visited.has(key)) {
+          visited.add(key);
+          stack.push([nr, nc]);
+        }
+      }
+    }
+    return visited.size === cellSet.size;
+  }
+
+  /** Find all 1-cells whose click would disconnect the remaining 1-cells */
+  function findDisconnectingCells(g) {
+    const allOnes = getAllOnes(g);
+    if (allOnes.length <= 2) return new Set(); // 1 or 2 cells: can't be disconnected by one move
+
+    const sz = g.length;
+    const result = new Set();
+
+    for (const [r, c] of allOnes) {
+      const endpoints = getRayEndpoints(g, r, c);
+      const toRemove = endpoints.filter(([er, ec]) =>
+        g[er][ec] === 1 && (er !== r || ec !== c)
+      );
+
+      if (toRemove.length === 0) continue;
+
+      // Remaining 1-cells after the move (center stays)
+      const removedKeys = new Set(toRemove.map(([er, ec]) => er * sz + ec));
+      const remaining = allOnes.filter(([or, oc]) => !removedKeys.has(or * sz + oc));
+
+      if (remaining.length <= 1) continue; // win condition, not a disconnection
+
+      if (!isConnected(remaining, sz)) {
+        result.add(r * sz + c);
+      }
+    }
+
+    return result;
   }
 
   /**
@@ -797,7 +861,7 @@ body {
   function render() {
     applyCellSize();
 
-    // Single pass: mark cells with no valid endpoints (cheap check)
+    // Mark cells with no valid endpoints
     const noEffect = new Set();
     for (let r = 0; r < n; r++) {
       for (let c = 0; c < n; c++) {
@@ -808,6 +872,9 @@ body {
       }
     }
 
+    // Mark cells that would disconnect the grid
+    disconnectingCells = findDisconnectingCells(grid);
+
     // Build HTML string — single innerHTML, no per-cell listeners
     let html = '';
     for (let r = 0; r < n; r++) {
@@ -815,6 +882,7 @@ body {
         const key = r * n + c;
         let cls = 'cell';
         if (noEffect.has(key)) cls += ' no-moves';
+        else if (disconnectingCells.has(key)) cls += ' disconnecting';
         html += `<div class="${cls}" data-value="${grid[r][c]}" data-row="${r}" data-col="${c}"></div>`;
       }
     }
@@ -919,6 +987,11 @@ body {
     if (animating || gameOver) return;
     if (grid[r][c] !== 1) return;
 
+    if (disconnectingCells.has(r * n + c)) {
+      showToast('该格会导致棋盘不连通，禁止点击');
+      return;
+    }
+
     const endpoints = getRayEndpoints(grid, r, c);
     const hasEffect = endpoints.some(([er, ec]) => grid[er][ec] === 1 && (er !== r || ec !== c));
     if (!hasEffect) {
@@ -945,13 +1018,16 @@ body {
     animating = false;
     moveHistory = [];
 
-    // Determine seed: explicit input > random 6-digit
+    // Determine seed
     const inputSeed = seedInputEl.value.trim();
-    if (useSeed !== undefined && /^\d{1,6}$/.test(inputSeed)) {
+    if (useSeed === true && /^\d{1,6}$/.test(inputSeed)) {
+      // Enter pressed with valid input — use the entered seed
       seed = inputSeed.padStart(6, '0');
-    } else if (!seed || useSeed === undefined) {
+    } else if (useSeed === 'random' || !seed) {
+      // Random button or initial load — generate new seed
       seed = randomSeed();
     }
+    // Otherwise (new game / play again / board size change): keep current seed
     seedInputEl.value = seed;
     rng = createRng(parseInt(seed, 10));
 
@@ -980,7 +1056,7 @@ body {
   document.getElementById('btn-play-again').addEventListener('click', () => newGame());
   document.getElementById('btn-random-seed').addEventListener('click', () => {
     seedInputEl.value = '';
-    newGame();
+    newGame('random');
   });
 
   // Seed input: pressing Enter uses the entered seed
@@ -1004,6 +1080,10 @@ body {
     newGame();
   });
 
+  document.getElementById('theme-select').addEventListener('change', (e) => {
+    applyTheme(e.target.value);
+  });
+
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
@@ -1015,6 +1095,155 @@ body {
     }
   });
 
+  // ============ Theme ============
+
+  const THEMES = {
+    blue: {
+      '--bg': '#eef0f4',
+      '--panel': '#ffffff',
+      '--cell-zero': '#dcdfe5',
+      '--cell-zero-hover': '#cfd2d9',
+      '--cell-one': '#002fa7',
+      '--cell-one-glow': 'rgba(0, 47, 167, 0.28)',
+      '--cell-hover': 'rgba(0, 47, 167, 0.14)',
+      '--center': '#f59e0b',
+      '--center-glow': 'rgba(245, 158, 11, 0.45)',
+      '--center-glow-strong': 'rgba(245, 158, 11, 0.30)',
+      '--endpoint': '#ef4444',
+      '--endpoint-glow': 'rgba(239, 68, 68, 0.50)',
+      '--endpoint-glow-strong': 'rgba(239, 68, 68, 0.30)',
+      '--ray': 'rgba(245, 158, 11, 0.32)',
+      '--ray-glow': 'rgba(245, 158, 11, 0.20)',
+      '--text': '#4a4d55',
+      '--text-dim': '#8b8f98',
+      '--text-bright': '#1a1d24',
+      '--border': '#d8dae0',
+      '--accent': '#002fa7',
+      '--btn-hover-bg': '#eef0f6',
+      '--btn-hover-border': '#c5c8d2',
+      '--btn-primary-hover': '#003dd4',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(0, 47, 167, 0.05) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(0, 47, 167, 0.04) 0%, transparent 60%)',
+    },
+    green: {
+      '--bg': '#ecfdf5',
+      '--panel': '#ffffff',
+      '--cell-zero': '#d1d5db',
+      '--cell-zero-hover': '#bcc1c9',
+      '--cell-one': '#166534',
+      '--cell-one-glow': 'rgba(22, 101, 52, 0.28)',
+      '--cell-hover': 'rgba(22, 101, 52, 0.14)',
+      '--center': '#f59e0b',
+      '--center-glow': 'rgba(245, 158, 11, 0.45)',
+      '--center-glow-strong': 'rgba(245, 158, 11, 0.30)',
+      '--endpoint': '#ef4444',
+      '--endpoint-glow': 'rgba(239, 68, 68, 0.50)',
+      '--endpoint-glow-strong': 'rgba(239, 68, 68, 0.30)',
+      '--ray': 'rgba(245, 158, 11, 0.32)',
+      '--ray-glow': 'rgba(245, 158, 11, 0.20)',
+      '--text': '#4a4d55',
+      '--text-dim': '#8b8f98',
+      '--text-bright': '#1a1d24',
+      '--border': '#d1d5db',
+      '--accent': '#166534',
+      '--btn-hover-bg': '#ecfdf3',
+      '--btn-hover-border': '#bcc1c9',
+      '--btn-primary-hover': '#15803d',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(22, 101, 52, 0.05) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(22, 101, 52, 0.04) 0%, transparent 60%)',
+    },
+    purple: {
+      '--bg': '#f5f3ff',
+      '--panel': '#ffffff',
+      '--cell-zero': '#ddd6fe',
+      '--cell-zero-hover': '#cdc4f8',
+      '--cell-one': '#7c3aed',
+      '--cell-one-glow': 'rgba(124, 58, 237, 0.28)',
+      '--cell-hover': 'rgba(124, 58, 237, 0.14)',
+      '--center': '#f59e0b',
+      '--center-glow': 'rgba(245, 158, 11, 0.45)',
+      '--center-glow-strong': 'rgba(245, 158, 11, 0.30)',
+      '--endpoint': '#ef4444',
+      '--endpoint-glow': 'rgba(239, 68, 68, 0.50)',
+      '--endpoint-glow-strong': 'rgba(239, 68, 68, 0.30)',
+      '--ray': 'rgba(245, 158, 11, 0.32)',
+      '--ray-glow': 'rgba(245, 158, 11, 0.20)',
+      '--text': '#4a4d55',
+      '--text-dim': '#8b8f98',
+      '--text-bright': '#1a1d24',
+      '--border': '#ddd6fe',
+      '--accent': '#7c3aed',
+      '--btn-hover-bg': '#f5f3ff',
+      '--btn-hover-border': '#cdc4f8',
+      '--btn-primary-hover': '#6d28d9',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(124, 58, 237, 0.05) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(124, 58, 237, 0.04) 0%, transparent 60%)',
+    },
+    dark: {
+      '--bg': '#1a1d24',
+      '--panel': '#262a33',
+      '--cell-zero': '#3a3d48',
+      '--cell-zero-hover': '#4a4e5a',
+      '--cell-one': '#60a5fa',
+      '--cell-one-glow': 'rgba(96, 165, 250, 0.35)',
+      '--cell-hover': 'rgba(96, 165, 250, 0.18)',
+      '--center': '#fbbf24',
+      '--center-glow': 'rgba(251, 191, 36, 0.50)',
+      '--center-glow-strong': 'rgba(251, 191, 36, 0.35)',
+      '--endpoint': '#f87171',
+      '--endpoint-glow': 'rgba(248, 113, 113, 0.55)',
+      '--endpoint-glow-strong': 'rgba(248, 113, 113, 0.35)',
+      '--ray': 'rgba(251, 191, 36, 0.28)',
+      '--ray-glow': 'rgba(251, 191, 36, 0.18)',
+      '--text': '#c9cdd4',
+      '--text-dim': '#8b8f98',
+      '--text-bright': '#f0f1f3',
+      '--border': '#3a3d48',
+      '--accent': '#60a5fa',
+      '--btn-hover-bg': '#323640',
+      '--btn-hover-border': '#4a4e5a',
+      '--btn-primary-hover': '#3b82f6',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(96, 165, 250, 0.06) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(96, 165, 250, 0.04) 0%, transparent 60%)',
+    },
+    warm: {
+      '--bg': '#fff7ed',
+      '--panel': '#ffffff',
+      '--cell-zero': '#fed7aa',
+      '--cell-zero-hover': '#fdc89b',
+      '--cell-one': '#ea580c',
+      '--cell-one-glow': 'rgba(234, 88, 12, 0.28)',
+      '--cell-hover': 'rgba(234, 88, 12, 0.14)',
+      '--center': '#f59e0b',
+      '--center-glow': 'rgba(245, 158, 11, 0.45)',
+      '--center-glow-strong': 'rgba(245, 158, 11, 0.30)',
+      '--endpoint': '#dc2626',
+      '--endpoint-glow': 'rgba(220, 38, 38, 0.50)',
+      '--endpoint-glow-strong': 'rgba(220, 38, 38, 0.30)',
+      '--ray': 'rgba(245, 158, 11, 0.32)',
+      '--ray-glow': 'rgba(245, 158, 11, 0.20)',
+      '--text': '#4a4d55',
+      '--text-dim': '#8b8f98',
+      '--text-bright': '#1a1d24',
+      '--border': '#fed7aa',
+      '--accent': '#ea580c',
+      '--btn-hover-bg': '#fff7ed',
+      '--btn-hover-border': '#fdc89b',
+      '--btn-primary-hover': '#d9480f',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(234, 88, 12, 0.05) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(234, 88, 12, 0.04) 0%, transparent 60%)',
+    },
+  };
+
+  function applyTheme(name) {
+    const theme = THEMES[name] || THEMES.blue;
+    const root = document.documentElement;
+    for (const [prop, val] of Object.entries(theme)) {
+      root.style.setProperty(prop, val);
+    }
+    try { localStorage.setItem('board-ray-theme', name); } catch (_) {}
+  }
+
   // ============ Init ============
 
   // Event delegation — one listener for the whole board (instead of n² per cell)
@@ -1025,6 +1254,14 @@ body {
   });
 
   n = parseInt(boardSizeSelect.value);
+
+  // Load saved theme
+  let savedTheme = 'blue';
+  try { savedTheme = localStorage.getItem('board-ray-theme') || 'blue'; } catch (_) {}
+  if (!THEMES[savedTheme]) savedTheme = 'blue';
+  document.getElementById('theme-select').value = savedTheme;
+  applyTheme(savedTheme);
+
   newGame();
 
   // Recalculate cell size on resize / orientation change
