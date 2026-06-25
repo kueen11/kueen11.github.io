@@ -8,31 +8,31 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --bg: #eef0f4;
-  --panel: #ffffff;
-  --cell-zero: #dcdfe5;
-  --cell-zero-hover: #cfd2d9;
-  --cell-one: #002fa7;
-  --cell-one-glow: rgba(0, 47, 167, 0.28);
-  --cell-hover: rgba(0, 47, 167, 0.14);
-  --center: #f59e0b;
-  --center-glow: rgba(245, 158, 11, 0.45);
-  --center-glow-strong: rgba(245, 158, 11, 0.30);
-  --endpoint: #ef4444;
-  --endpoint-glow: rgba(239, 68, 68, 0.50);
-  --endpoint-glow-strong: rgba(239, 68, 68, 0.30);
-  --ray: rgba(245, 158, 11, 0.32);
-  --ray-glow: rgba(245, 158, 11, 0.20);
-  --text: #4a4d55;
+  --bg: #1a1d24;
+  --panel: #262a33;
+  --cell-zero: #3a3d48;
+  --cell-zero-hover: #4a4e5a;
+  --cell-one: #89CFF0;
+  --cell-one-glow: rgba(137, 207, 240, 0.35);
+  --cell-hover: rgba(137, 207, 240, 0.18);
+  --center: #fbbf24;
+  --center-glow: rgba(251, 191, 36, 0.50);
+  --center-glow-strong: rgba(251, 191, 36, 0.35);
+  --endpoint: #f87171;
+  --endpoint-glow: rgba(248, 113, 113, 0.55);
+  --endpoint-glow-strong: rgba(248, 113, 113, 0.35);
+  --ray: rgba(251, 191, 36, 0.28);
+  --ray-glow: rgba(251, 191, 36, 0.18);
+  --text: #c9cdd4;
   --text-dim: #8b8f98;
-  --text-bright: #1a1d24;
-  --border: #d8dae0;
-  --accent: #002fa7;
-  --btn-hover-bg: #eef0f6;
-  --btn-hover-border: #c5c8d2;
-  --btn-primary-hover: #003dd4;
-  --body-gradient-1: radial-gradient(ellipse at 50% 0%, rgba(0, 47, 167, 0.05) 0%, transparent 60%);
-  --body-gradient-2: radial-gradient(ellipse at 80% 100%, rgba(0, 47, 167, 0.04) 0%, transparent 60%);
+  --text-bright: #f0f1f3;
+  --border: #3a3d48;
+  --accent: #89CFF0;
+  --btn-hover-bg: #323640;
+  --btn-hover-border: #4a4e5a;
+  --btn-primary-hover: #7ab8d8;
+  --body-gradient-1: radial-gradient(ellipse at 50% 0%, rgba(137, 207, 240, 0.06) 0%, transparent 60%);
+  --body-gradient-2: radial-gradient(ellipse at 80% 100%, rgba(137, 207, 240, 0.04) 0%, transparent 60%);
   /* cell-size and gap are set dynamically via JS */
   --cell-size: 60px;
   --gap: 4px;
@@ -378,6 +378,82 @@ body {
   to { opacity: 0; }
 }
 
+/* Demo mode */
+.cell.demo-next {
+  outline: 3px solid #fbbf24;
+  outline-offset: 2px;
+  animation: demoPulse 1s ease-in-out infinite;
+  cursor: pointer !important;
+  z-index: 3;
+  opacity: 1 !important;
+}
+@keyframes demoPulse {
+  0%, 100% { outline-color: #fbbf24; box-shadow: 0 0 12px rgba(251, 191, 36, 0.45); }
+  50% { outline-color: #f59e0b; box-shadow: 0 0 28px rgba(251, 191, 36, 0.75); }
+}
+.cell.demo-disabled {
+  opacity: 0.45;
+  cursor: not-allowed !important;
+}
+.cell.demo-disabled:hover {
+  transform: none;
+}
+
+.demo-banner {
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #1a1d24;
+  padding: 8px 20px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  justify-content: center;
+  animation: bannerIn 0.3s ease;
+}
+.demo-banner.hidden { display: none; }
+@keyframes bannerIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.demo-banner .demo-step {
+  font-variant-numeric: tabular-nums;
+}
+.demo-banner .btn-demo-exit {
+  background: rgba(26, 29, 36, 0.15);
+  border: 1px solid rgba(26, 29, 36, 0.25);
+  color: #1a1d24;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.demo-banner .btn-demo-exit:hover {
+  background: rgba(26, 29, 36, 0.25);
+}
+.demo-banner .btn-auto-play {
+  background: rgba(26, 29, 36, 0.15);
+  border: 1px solid rgba(26, 29, 36, 0.25);
+  color: #1a1d24;
+  padding: 4px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 500;
+  transition: background 0.2s;
+}
+.demo-banner .btn-auto-play:hover {
+  background: rgba(26, 29, 36, 0.25);
+}
+.demo-banner .btn-auto-play.playing {
+  background: rgba(239, 68, 68, 0.35);
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
 /* Responsive */
 @media (max-width: 500px) {
   .info-bar { gap: 16px; padding: 8px 16px; }
@@ -408,6 +484,13 @@ body {
     </div>
   </div>
 
+  <div class="demo-banner hidden" id="demo-banner">
+    <span>🎬 演示模式</span>
+    <span class="demo-step" id="demo-step-text">步骤 0/0</span>
+    <button class="btn-auto-play" id="btn-auto-play">▶ 自动播放</button>
+    <button class="btn-demo-exit" id="btn-demo-exit">✕ 退出演示</button>
+  </div>
+
   <div class="board-wrapper">
     <div class="board" id="board"></div>
   </div>
@@ -415,6 +498,7 @@ body {
   <div class="controls">
     <button class="btn primary" id="btn-new" title="生成新棋盘">🔄 新游戏</button>
     <button class="btn" id="btn-undo" title="撤销上一步 (Ctrl+Z)">↩ 撤销</button>
+    <button class="btn" id="btn-demo" title="演示模式 — 逆向展示解法">🎬 演示</button>
     <div class="seed-input-group">
       <label for="seed-input">种子</label>
       <input type="text" id="seed-input" placeholder="留空随机" maxlength="6" pattern="\d*" inputmode="numeric" autocomplete="off">
@@ -423,10 +507,10 @@ body {
     <div class="theme-selector">
       <label for="theme-select">配色</label>
       <select id="theme-select">
+        <option value="dark" selected>暗</option>
         <option value="blue">蓝</option>
         <option value="green">绿</option>
         <option value="purple">紫</option>
-        <option value="dark">暗</option>
         <option value="warm">暖</option>
       </select>
     </div>
@@ -512,6 +596,11 @@ body {
   let animating = false;
   let gameOver = false;
   let disconnectingCells = new Set();
+  let demoMode = false;
+  let demoCenters = [];      // reversed generation centers (solution sequence)
+  let demoIndex = 0;         // current position in demoCenters
+  let demoAutoPlay = false;
+  let demoTimeoutId = null;
 
   // ============ Core logic ============
 
@@ -676,6 +765,10 @@ body {
   /** Undo last move */
   function undoMove() {
     if (animating) return;
+    if (demoMode) {
+      showToast('演示模式下不能撤销');
+      return;
+    }
     if (gameOver) {
       // Allow undo after winning — dismiss win dialog and continue
       hideWin();
@@ -703,17 +796,21 @@ body {
    *   2. Randomly select a 1-cell as the "centre".
    *   3. For each of its 4 directions:
    *      - If no adjacent cell (centre on that edge): skip this direction.
-   *      - If adjacent cell is 0: randomly (50%) decide to grow (convert to 1).
+   *      - If adjacent cell is 0: randomly (50%) decide to grow (convert to 1),
+   *        but ONLY if the cell beyond is also 0 (no single-0 gap to other 1s,
+   *        which would create a bridge and break forward-reverse consistency).
    *      - If adjacent cell is 1: follow the chain of 1's to the farthest end,
-   *        then grow at the cell just beyond it. If that cell is out of bounds:
-   *        the whole centre is invalid (hard invalidation).
-   *   4. Apply all growths (convert those 0-cells to 1).
+   *        then grow at the cell just beyond it. Same gap check applies.
+   *        If that cell is out of bounds: hard invalidation.
+   *   4. Verify: forward elimination from the centre on the grown state must
+   *      eliminate exactly the newly grown cells (and nothing else). Roll back
+   *      on failure.
    *   5. Repeat until exactly sz zeros remain.
    *   6. If all 1-cells cannot grow, restart from scratch.
    *
-   * This reverses the game's forward elimination: forward moves send rays
-   * from a centre to set endpoint cells to 0; reverse growth restores those
-   * endpoints from 0 to 1. The board is solvable by construction.
+   * By verifying every step the generation guarantees that the reverse
+   * growth sequence, when played forward, correctly reduces the board to
+   * a single 1-cell.
    */
   function generateBoard(sz) {
     const totalCells = sz * sz;
@@ -721,9 +818,9 @@ body {
     const targetOnes = totalCells - targetZeros;
     const growProb = 0.5;
     const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-
     while (true) {
       // --- Step 1: seed a single 1-cell (the solved state) ---
+      const growthSteps = [];
       const g = Array.from({ length: sz }, () => new Array(sz).fill(0));
       const sr = Math.floor(rng() * sz);
       const sc = Math.floor(rng() * sz);
@@ -750,7 +847,14 @@ body {
             if (nr < 0 || nr >= sz || nc < 0 || nc >= sz) continue;
 
             if (g[nr][nc] === 0) {
-              // Adjacent to 0: randomly decide to grow into it
+              // Adjacent to 0: randomly decide to grow into it.
+              // BUT: if the cell two steps away is already 1 (connected
+              // via other paths), growing here would create a bridge and
+              // the forward ray would extend past this cell — skip.
+              const nnr = nr + dr, nnc = nc + dc;
+              if (nnr >= 0 && nnr < sz && nnc >= 0 && nnc < sz && g[nnr][nnc] === 1) {
+                continue;
+              }
               if (rng() < growProb) {
                 growSet.add(nr * sz + nc);
               }
@@ -766,6 +870,12 @@ body {
                 // so this reverse move is not valid.
                 hardInvalid = true;
                 break;
+              }
+              // Same bridge check: if the cell two beyond the chain is
+              // already 1, growing one cell would create a bridge.
+              const bnr = grow_r + dr, bnc = grow_c + dc;
+              if (bnr >= 0 && bnr < sz && bnc >= 0 && bnc < sz && g[bnr][bnc] === 1) {
+                continue;
               }
               growSet.add(grow_r * sz + grow_c);
             }
@@ -785,12 +895,39 @@ body {
           if (zeroCount - newOnes.length < targetZeros) continue;
           if (newOnes.length === 0) continue;
 
-          // Apply all growths for this step
+          // --- Tentatively apply growths and verify consistency ---
+          // Forward elimination from this centre on the grown state must
+          // eliminate exactly the newly grown cells (and nothing else),
+          // bringing the board back to the pre-growth state.
           for (const [gr, gc] of newOnes) {
             g[gr][gc] = 1;
-            zeroCount--;
           }
 
+          {
+            const testGrid = cloneGrid(g);
+            const verifyResult = applyMove(testGrid, cr, cc);
+            const elimKeys = new Set(verifyResult.changed.map(([er, ec]) => er * sz + ec));
+            const newKeys = new Set(newOnes.map(([gr, gc]) => gr * sz + gc));
+
+            let consistent = verifyResult.changed.length === newOnes.length;
+            if (consistent) {
+              for (const [er, ec] of verifyResult.changed) {
+                if (!newKeys.has(er * sz + ec)) { consistent = false; break; }
+              }
+            }
+
+            if (!consistent) {
+              // Rollback — this centre would produce an invalid forward move
+              for (const [gr, gc] of newOnes) {
+                g[gr][gc] = 0;
+              }
+              continue;
+            }
+          }
+
+          // Commit
+          zeroCount -= newOnes.length;
+          growthSteps.push({ center: [cr, cc], grown: newOnes.map(p => [...p]) });
           grownThisStep = true;
           break; // one growth step per iteration, then re-evaluate
         }
@@ -800,17 +937,30 @@ body {
 
       if (stalled) continue; // couldn't grow enough, retry
 
-      // --- Validate ---
+      // --- Final validation ---
       const finalOnes = countOnes(g);
       if (finalOnes !== targetOnes) continue;
 
-      // Board is solvable by construction — reverse growth mirrors valid
-      // forward moves, so no additional solver verification is needed.
-      return g;
+      // Verify the full forward sequence: playing the growth steps in
+      // reverse order must reduce the board to a single 1-cell.
+      {
+        const fwdGrid = cloneGrid(g);
+        const fwdSteps = [...growthSteps].reverse();
+        let fwdOk = true;
+        for (const step of fwdSteps) {
+          const [cr, cc] = step.center;
+          const result = applyMove(fwdGrid, cr, cc);
+          if (!result || result.changed.length === 0) { fwdOk = false; break; }
+        }
+        if (!fwdOk || countOnes(fwdGrid) !== 1) continue;
+      }
+
+      return { grid: g, growthSteps };
     }
 
     // Fallback
-    return createFallbackBoard(sz);
+    const fb = createFallbackBoard(sz);
+    return { grid: fb, growthSteps: [] };
   }
 
   /** Shuffle array in place */
@@ -875,14 +1025,40 @@ body {
     // Mark cells that would disconnect the grid
     disconnectingCells = findDisconnectingCells(grid);
 
+    // In demo mode, find the next cell to highlight (use pre-recorded grown cells)
+    let demoNextKey = -1;
+    if (demoMode) {
+      for (let i = demoIndex; i < demoCenters.length; i++) {
+        const step = demoCenters[i];
+        const [cr, cc] = step.center;
+        if (grid[cr] && grid[cr][cc] === 1) {
+          // Check if any of the pre-recorded grown cells are still 1
+          const hasEffect = step.grown.some(([gr, gc]) => grid[gr] && grid[gr][gc] === 1);
+          if (hasEffect) {
+            demoNextKey = cr * n + cc;
+            demoIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
     // Build HTML string — single innerHTML, no per-cell listeners
     let html = '';
     for (let r = 0; r < n; r++) {
       for (let c = 0; c < n; c++) {
         const key = r * n + c;
         let cls = 'cell';
-        if (noEffect.has(key)) cls += ' no-moves';
-        else if (disconnectingCells.has(key)) cls += ' disconnecting';
+        if (demoMode) {
+          if (key === demoNextKey) {
+            cls += ' demo-next';
+          } else if (grid[r][c] === 1) {
+            cls += ' demo-disabled';
+          }
+        } else {
+          if (noEffect.has(key)) cls += ' no-moves';
+          else if (disconnectingCells.has(key)) cls += ' disconnecting';
+        }
         html += `<div class="${cls}" data-value="${grid[r][c]}" data-row="${r}" data-col="${c}"></div>`;
       }
     }
@@ -903,11 +1079,24 @@ body {
     return boardEl.querySelector(`[data-row="${r}"][data-col="${c}"]`);
   }
 
-  async function animateMove(r, c, endpoints) {
+  /**
+   * Animate and apply a move.
+   *
+   * @param {number} r - center row
+   * @param {number} c - center col
+   * @param {[number,number][]} endpoints - ray endpoints for animation
+   *   (rays animate toward each non-centre endpoint)
+   * @param {[number,number][]} [flipTargets] - cells to actually flip to 0.
+   *   Defaults to the 1-cells among `endpoints` (normal play).  In demo
+   *   mode this is set to the pre‑recorded grown cells so the board
+   *   follows the guaranteed-solvable sequence even when the generation
+   *   step produced cells that aren't outermost ray endpoints.
+   */
+  async function animateMove(r, c, endpoints, flipTargets) {
     animating = true;
 
-    // Determine which cells will actually change (value 1, not center)
-    const toChange = endpoints.filter(([er, ec]) =>
+    // Determine which cells to flip to 0
+    const toChange = (flipTargets || endpoints).filter(([er, ec]) =>
       grid[er][ec] === 1 && (er !== r || ec !== c)
     );
     if (toChange.length === 0) {
@@ -921,7 +1110,7 @@ body {
     centerEl.classList.add('center');
     await sleep(200);
 
-    // Phase 2: animate rays in 4 directions
+    // Phase 2: animate rays toward the animation endpoints
     const rayPromises = [];
     for (const [er, ec] of endpoints) {
       if (er === r && ec === c) continue;
@@ -929,7 +1118,7 @@ body {
     }
     await Promise.all(rayPromises);
 
-    // Phase 3: flash endpoints
+    // Phase 3: flash the cells that will be flipped (not the animation endpoints)
     for (const [er, ec] of toChange) {
       const el = getCellEl(er, ec);
       if (el) el.classList.add('endpoint-hit');
@@ -950,8 +1139,10 @@ body {
     // Check win
     if (countOnes(grid) === 1) {
       gameOver = true;
-      await sleep(300);
-      showWin();
+      if (!demoMode) {
+        await sleep(300);
+        showWin();
+      }
     } else if (countOnes(grid) === 0) {
       gameOver = true;
       showToast('棋盘已清空，无法继续');
@@ -987,6 +1178,33 @@ body {
     if (animating || gameOver) return;
     if (grid[r][c] !== 1) return;
 
+    if (demoMode) {
+      const cellEl = getCellEl(r, c);
+      if (!cellEl || !cellEl.classList.contains('demo-next')) {
+        showToast('请点击高亮的格子');
+        return;
+      }
+      // Clear auto-play timeout on manual click
+      if (demoTimeoutId) {
+        clearTimeout(demoTimeoutId);
+        demoTimeoutId = null;
+      }
+      const clickedDemoIndex = demoIndex;
+      // Animate rays using the correct forward ray endpoints (so rays
+      // always go all the way to a 0-cell or edge), but flip the
+      // pre-recorded grown cells so the board follows the guaranteed-
+      // solvable sequence from reverse generation.
+      const step = demoCenters[clickedDemoIndex];
+      const animEndpoints = getRayEndpoints(grid, r, c);
+      animateMove(r, c, animEndpoints, step.grown).then(() => {
+        if (demoMode) {
+          demoIndex = clickedDemoIndex + 1;
+          advanceDemo();
+        }
+      });
+      return;
+    }
+
     if (disconnectingCells.has(r * n + c)) {
       showToast('该格会导致棋盘不连通，禁止点击');
       return;
@@ -1013,6 +1231,7 @@ body {
   }
 
   function newGame(useSeed) {
+    if (demoMode) exitDemoMode();
     hideWin();
     gameOver = false;
     animating = false;
@@ -1031,12 +1250,168 @@ body {
     seedInputEl.value = seed;
     rng = createRng(parseInt(seed, 10));
 
-    grid = generateBoard(n);
+    const result = generateBoard(n);
+    grid = result.grid;
+    demoCenters = [...result.growthSteps].reverse();
+    demoIndex = 0;
     initialGrid = cloneGrid(grid);
+
     render();
     updateInfo();
     sizeDisplayEl.textContent = `${n}×${n}`;
     seedDisplayEl.textContent = seed;
+  }
+
+  // ============ Demo mode ============
+
+  function enterDemoMode() {
+    hideWin();
+    gameOver = false;
+    animating = false;
+    moveHistory = [];
+    stopAutoPlay();
+
+    // Use the current board's initial state and its generation sequence
+    // (both stored during the last newGame call)
+    if (demoCenters.length === 0) {
+      showToast('无法为此棋盘生成演示序列，请更换种子后重试');
+      return;
+    }
+
+    // Reset to initial board state
+    grid = cloneGrid(initialGrid);
+    demoIndex = 0;
+    demoMode = true;
+
+    render();
+    updateInfo();
+    sizeDisplayEl.textContent = `${n}×${n}`;
+    seedDisplayEl.textContent = seed;
+
+    // Show banner
+    document.getElementById('demo-banner').classList.remove('hidden');
+    document.getElementById('btn-demo').textContent = '✕ 退出演示';
+
+    // Disable controls that shouldn't be used during demo
+    document.getElementById('btn-new').disabled = true;
+    document.getElementById('board-size').disabled = true;
+    seedInputEl.disabled = true;
+    document.getElementById('btn-random-seed').disabled = true;
+
+    // Highlight first step
+    advanceDemo();
+  }
+
+  function exitDemoMode() {
+    stopAutoPlay();
+    demoMode = false;
+    demoCenters = [];
+    demoIndex = 0;
+    gameOver = false;
+
+    document.getElementById('demo-banner').classList.add('hidden');
+    document.getElementById('btn-demo').textContent = '🎬 演示';
+    document.getElementById('btn-new').disabled = false;
+    document.getElementById('board-size').disabled = false;
+    seedInputEl.disabled = false;
+    document.getElementById('btn-random-seed').disabled = false;
+
+    render();
+  }
+
+  function advanceDemo() {
+    if (!demoMode) return;
+    if (demoTimeoutId) {
+      clearTimeout(demoTimeoutId);
+      demoTimeoutId = null;
+    }
+
+    // Check if board is solved
+    if (countOnes(grid) === 1) {
+      updateDemoBanner();
+      showToast('🎉 演示完成！棋盘已归约至 1 格');
+      document.getElementById('demo-step-text').textContent = '✅ 完成';
+      stopAutoPlay();
+      demoTimeoutId = setTimeout(() => exitDemoMode(), 2500);
+      return;
+    }
+
+    if (countOnes(grid) === 0) {
+      showToast('演示异常：棋盘已清空');
+      exitDemoMode();
+      return;
+    }
+
+    // Find next valid center in the sequence using pre-recorded grown cells
+    let found = false;
+    for (let i = demoIndex; i < demoCenters.length; i++) {
+      const step = demoCenters[i];
+      const [cr, cc] = step.center;
+      if (grid[cr] && grid[cr][cc] === 1) {
+        // Check if any of the pre-recorded grown cells are still 1 on the board
+        const hasEffect = step.grown.some(([gr, gc]) => grid[gr] && grid[gr][gc] === 1);
+        if (hasEffect) {
+          demoIndex = i;
+          found = true;
+          break;
+        }
+      }
+    }
+
+    if (!found) {
+      if (countOnes(grid) > 1) {
+        showToast('演示序列已结束，棋盘未完全求解');
+      }
+      exitDemoMode();
+      return;
+    }
+
+    updateDemoBanner();
+    render();
+
+    // Auto-play: schedule the next click
+    if (demoAutoPlay) {
+      demoTimeoutId = setTimeout(() => {
+        if (!demoMode || !demoAutoPlay) return;
+        const step = demoCenters[demoIndex];
+        handleCellClick(step.center[0], step.center[1]);
+      }, 1000);
+    }
+  }
+
+  function updateDemoBanner() {
+    const stepText = document.getElementById('demo-step-text');
+    if (stepText) {
+      stepText.textContent = `步骤 ${demoIndex + 1}/${demoCenters.length}`;
+    }
+  }
+
+  function startAutoPlay() {
+    demoAutoPlay = true;
+    const btn = document.getElementById('btn-auto-play');
+    btn.textContent = '⏸ 停止';
+    btn.classList.add('playing');
+    if (demoTimeoutId) clearTimeout(demoTimeoutId);
+    if (!animating && demoMode) {
+      demoTimeoutId = setTimeout(() => {
+        if (!demoMode || !demoAutoPlay) return;
+        const step = demoCenters[demoIndex];
+        handleCellClick(step.center[0], step.center[1]);
+      }, 600);
+    }
+  }
+
+  function stopAutoPlay() {
+    demoAutoPlay = false;
+    if (demoTimeoutId) {
+      clearTimeout(demoTimeoutId);
+      demoTimeoutId = null;
+    }
+    const btn = document.getElementById('btn-auto-play');
+    if (btn) {
+      btn.textContent = '▶ 自动播放';
+      btn.classList.remove('playing');
+    }
   }
 
   function showToast(msg) {
@@ -1063,6 +1438,7 @@ body {
   seedInputEl.addEventListener('keydown', (e) => {
     if (e.key === 'Enter') {
       e.preventDefault();
+      if (demoMode) exitDemoMode();
       newGame(true);
     }
   });
@@ -1076,8 +1452,29 @@ body {
   });
 
   boardSizeSelect.addEventListener('change', () => {
+    if (demoMode) exitDemoMode();
     n = parseInt(boardSizeSelect.value);
     newGame();
+  });
+
+  document.getElementById('btn-demo').addEventListener('click', () => {
+    if (demoMode) {
+      exitDemoMode();
+    } else {
+      enterDemoMode();
+    }
+  });
+
+  document.getElementById('btn-demo-exit').addEventListener('click', () => {
+    exitDemoMode();
+  });
+
+  document.getElementById('btn-auto-play').addEventListener('click', () => {
+    if (demoAutoPlay) {
+      stopAutoPlay();
+    } else {
+      startAutoPlay();
+    }
   });
 
   document.getElementById('theme-select').addEventListener('change', (e) => {
@@ -1088,7 +1485,7 @@ body {
   document.addEventListener('keydown', (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
       e.preventDefault();
-      undoMove();
+      if (!demoMode) undoMove();
     }
     if (e.key === 'r' && e.ctrlKey) {
       // Don't interfere with browser reload
@@ -1184,9 +1581,9 @@ body {
       '--panel': '#262a33',
       '--cell-zero': '#3a3d48',
       '--cell-zero-hover': '#4a4e5a',
-      '--cell-one': '#60a5fa',
-      '--cell-one-glow': 'rgba(96, 165, 250, 0.35)',
-      '--cell-hover': 'rgba(96, 165, 250, 0.18)',
+      '--cell-one': '#89CFF0',
+      '--cell-one-glow': 'rgba(137, 207, 240, 0.35)',
+      '--cell-hover': 'rgba(137, 207, 240, 0.18)',
       '--center': '#fbbf24',
       '--center-glow': 'rgba(251, 191, 36, 0.50)',
       '--center-glow-strong': 'rgba(251, 191, 36, 0.35)',
@@ -1199,12 +1596,12 @@ body {
       '--text-dim': '#8b8f98',
       '--text-bright': '#f0f1f3',
       '--border': '#3a3d48',
-      '--accent': '#60a5fa',
+      '--accent': '#89CFF0',
       '--btn-hover-bg': '#323640',
       '--btn-hover-border': '#4a4e5a',
-      '--btn-primary-hover': '#3b82f6',
-      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(96, 165, 250, 0.06) 0%, transparent 60%)',
-      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(96, 165, 250, 0.04) 0%, transparent 60%)',
+      '--btn-primary-hover': '#7ab8d8',
+      '--body-gradient-1': 'radial-gradient(ellipse at 50% 0%, rgba(137, 207, 240, 0.06) 0%, transparent 60%)',
+      '--body-gradient-2': 'radial-gradient(ellipse at 80% 100%, rgba(137, 207, 240, 0.04) 0%, transparent 60%)',
     },
     warm: {
       '--bg': '#fff7ed',
@@ -1256,9 +1653,9 @@ body {
   n = parseInt(boardSizeSelect.value);
 
   // Load saved theme
-  let savedTheme = 'blue';
-  try { savedTheme = localStorage.getItem('board-ray-theme') || 'blue'; } catch (_) {}
-  if (!THEMES[savedTheme]) savedTheme = 'blue';
+  let savedTheme = 'dark';
+  try { savedTheme = localStorage.getItem('board-ray-theme') || 'dark'; } catch (_) {}
+  if (!THEMES[savedTheme]) savedTheme = 'dark';
   document.getElementById('theme-select').value = savedTheme;
   applyTheme(savedTheme);
 
