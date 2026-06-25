@@ -655,11 +655,10 @@ body {
     const totalCells = sz * sz;
     const targetZeros = sz;
     const targetOnes = totalCells - targetZeros;
-    const maxAttempts = 500;
     const growProb = 0.5;
     const DIRS = [[-1, 0], [1, 0], [0, -1], [0, 1]];
 
-    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    while (true) {
       // --- Step 1: seed a single 1-cell (the solved state) ---
       const g = Array.from({ length: sz }, () => new Array(sz).fill(0));
       const sr = Math.floor(rng() * sz);
