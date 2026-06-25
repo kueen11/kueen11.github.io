@@ -101,6 +101,7 @@ body {
 }
 .info-value.ones { color: var(--cell-one); }
 .info-value.moves { color: var(--accent); }
+.info-value.seed-val { font-size: 0.95rem; font-weight: 500; color: var(--text-dim); letter-spacing: 0.06em; }
 
 /* Board */
 .board-wrapper {
@@ -257,6 +258,40 @@ body {
   border-color: #002fa7;
 }
 
+.seed-input-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.seed-input-group label {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+.seed-input-group input {
+  width: 64px;
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 0.9rem;
+  font-family: 'SF Mono', 'Cascadia Code', 'Consolas', monospace;
+  text-align: center;
+  outline: none;
+  letter-spacing: 0.08em;
+}
+.seed-input-group input:focus {
+  border-color: #002fa7;
+}
+.seed-input-group .btn {
+  padding: 6px 10px;
+  font-size: 0.9rem;
+}
+
 /* Win overlay */
 .overlay {
   position: fixed;
@@ -366,6 +401,10 @@ body {
       <span class="info-label">棋盘</span>
       <span class="info-value" id="size-display">5×5</span>
     </div>
+    <div class="info-item">
+      <span class="info-label">种子</span>
+      <span class="info-value seed-val" id="seed-display">------</span>
+    </div>
   </div>
 
   <div class="board-wrapper">
@@ -375,6 +414,11 @@ body {
   <div class="controls">
     <button class="btn primary" id="btn-new" title="生成新棋盘">🔄 新游戏</button>
     <button class="btn" id="btn-undo" title="撤销上一步 (Ctrl+Z)">↩ 撤销</button>
+    <div class="seed-input-group">
+      <label for="seed-input">种子</label>
+      <input type="text" id="seed-input" placeholder="留空随机" maxlength="6" pattern="\d*" inputmode="numeric" autocomplete="off">
+      <button class="btn" id="btn-random-seed" title="随机种子">🎲</button>
+    </div>
     <div class="size-selector">
       <label for="board-size">大小</label>
       <select id="board-size">
@@ -418,11 +462,30 @@ body {
   // ============ Constants ============
   const ANIM_SPEED = 45; // ms per ray cell
 
+  // ============ Seeded PRNG (mulberry32) ============
+  /** Create a seeded random number generator. Same seed → same sequence. */
+  function createRng(seed) {
+    let a = seed | 0;
+    return function() {
+      a |= 0; a = a + 0x6D2B79F5 | 0;
+      let t = Math.imul(a ^ a >>> 15, 1 | a);
+      t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  /** Generate a random 6-digit seed string (000000–999999) */
+  function randomSeed() {
+    return Math.floor(Math.random() * 1000000).toString().padStart(6, '0');
+  }
+
   // ============ DOM refs ============
   const boardEl = document.getElementById('board');
   const onesCountEl = document.getElementById('ones-count');
   const movesCountEl = document.getElementById('moves-count');
   const sizeDisplayEl = document.getElementById('size-display');
+  const seedDisplayEl = document.getElementById('seed-display');
+  const seedInputEl = document.getElementById('seed-input');
   const winOverlay = document.getElementById('win-overlay');
   const winMovesEl = document.getElementById('win-moves');
   const winSizeEl = document.getElementById('win-size');
@@ -430,6 +493,8 @@ body {
 
   // ============ State ============
   let n = 5;
+  let seed = '';
+  let rng = Math.random; // current random function (seeded or Math.random fallback)
   let grid = [];
   let initialGrid = []; // for undo all the way back
   let moveHistory = [];
@@ -597,8 +662,8 @@ body {
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
       // --- Step 1: seed a single 1-cell (the solved state) ---
       const g = Array.from({ length: sz }, () => new Array(sz).fill(0));
-      const sr = Math.floor(Math.random() * sz);
-      const sc = Math.floor(Math.random() * sz);
+      const sr = Math.floor(rng() * sz);
+      const sc = Math.floor(rng() * sz);
       g[sr][sc] = 1;
       let zeroCount = totalCells - 1;
       const growthSteps = []; // [{ center: [r,c], newOnes: [[r,c],...] }]
@@ -625,7 +690,7 @@ body {
 
             if (g[nr][nc] === 0) {
               // Adjacent to 0: randomly decide to grow into it
-              if (Math.random() < growProb) {
+              if (rng() < growProb) {
                 growSet.add(nr * sz + nc);
               }
             } else {
@@ -692,7 +757,7 @@ body {
   /** Shuffle array in place */
   function shuffle(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
+      const j = Math.floor(rng() * (i + 1));
       [arr[i], arr[j]] = [arr[j], arr[i]];
     }
   }
@@ -917,16 +982,28 @@ body {
     winOverlay.classList.add('hidden');
   }
 
-  function newGame() {
+  function newGame(useSeed) {
     hideWin();
     gameOver = false;
     animating = false;
     moveHistory = [];
+
+    // Determine seed: explicit input > random 6-digit
+    const inputSeed = seedInputEl.value.trim();
+    if (useSeed !== undefined && /^\d{1,6}$/.test(inputSeed)) {
+      seed = inputSeed.padStart(6, '0');
+    } else if (!seed || useSeed === undefined) {
+      seed = randomSeed();
+    }
+    seedInputEl.value = seed;
+    rng = createRng(parseInt(seed, 10));
+
     grid = generateBoard(n);
     initialGrid = cloneGrid(grid);
     render();
     updateInfo();
     sizeDisplayEl.textContent = `${n}×${n}`;
+    seedDisplayEl.textContent = seed;
   }
 
   function showToast(msg) {
@@ -941,9 +1018,21 @@ body {
 
   // ============ Button handlers ============
 
-  document.getElementById('btn-new').addEventListener('click', newGame);
+  document.getElementById('btn-new').addEventListener('click', () => newGame());
   document.getElementById('btn-undo').addEventListener('click', undoMove);
-  document.getElementById('btn-play-again').addEventListener('click', newGame);
+  document.getElementById('btn-play-again').addEventListener('click', () => newGame());
+  document.getElementById('btn-random-seed').addEventListener('click', () => {
+    seedInputEl.value = '';
+    newGame();
+  });
+
+  // Seed input: pressing Enter uses the entered seed
+  seedInputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      newGame(true);
+    }
+  });
 
   // Click overlay background to dismiss win dialog
   winOverlay.addEventListener('click', (e) => {
